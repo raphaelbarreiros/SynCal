@@ -1,0 +1,15 @@
+schema: 1
+story: "1.1"
+story_title: "Bootstrap Project Docker Stack"
+gate: "PASS"
+status_reason: "Local dev guide now matches the enforced env contract; stack boots when following documented steps."
+reviewer: "Quinn (Test Architect)"
+updated: "2025-09-18T22:54:47Z"
+waiver:
+  active: false
+top_issues: []
+risk_summary:
+  totals: { critical: 0, high: 0, medium: 0, low: 0 }
+  recommendations:
+    must_fix: []
+    monitor: []
