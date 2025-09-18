@@ -1,0 +1,56 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [ main ]
+  schedule:
+    - cron: '0 3 * * *' # nightly
+  workflow_dispatch:
+
+jobs:
+  pr-lint-unit-integration:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install
+        run: npm ci || echo "No packages yet"
+      - name: Lint
+        run: npm run lint --if-present
+      - name: Unit tests
+        run: npm test --if-present
+      - name: Integration tests
+        run: npm run test:integration --if-present
+
+  main-integration-build:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install
+        run: npm ci || echo "No packages yet"
+      - name: Integration tests
+        run: npm run test:integration --if-present
+      - name: Build images (placeholder)
+        run: echo "Build & push container images here"
+
+  nightly-e2e:
+    if: github.event_name == 'schedule'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install
+        run: npm ci || echo "No packages yet"
+      - name: E2E tests (placeholder)
+        run: echo "Run Playwright e2e against staging here"
+

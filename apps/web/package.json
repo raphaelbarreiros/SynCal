@@ -1,0 +1,28 @@
+{
+  "name": "@syncal/web",
+  "private": true,
+  "version": "0.0.1",
+  "type": "module",
+  "scripts": {
+    "dev": "next dev -p 3000",
+    "build": "next build",
+    "start": "next start -p 3000",
+    "ladle": "ladle serve",
+    "ladle:build": "ladle build",
+    "ladle:preview": "ladle preview"
+  },
+  "dependencies": {
+    "next": "^15.1.8",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.7.5",
+    "@types/react": "^19.0.1",
+    "@types/react-dom": "^19.0.1",
+    "autoprefixer": "^10.4.20",
+    "postcss": "^8.4.47",
+    "tailwindcss": "^4.1.13",
+    "typescript": "^5.9.2"
+  }
+}

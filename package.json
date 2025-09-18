@@ -1,0 +1,13 @@
+{
+  "name": "syncal",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "lint": "echo 'no lint yet'",
+    "build": "echo 'root build placeholder'",
+    "test": "echo 'no tests yet'"
+  }
+}
