@@ -31,10 +31,10 @@ Notes:
 - For first boot, `ADMIN_EMAIL` and `ADMIN_PASSWORD` in the env file allow creating the initial admin account.
 
 ## 2) Start the Stack (Docker Compose)
-The architecture references a Compose file at `infra/docker-compose.yml`. Once present, start services with:
+The Compose file lives at the repository root. Start services with:
 
 ```bash
-docker compose -f infra/docker-compose.yml up --build
+docker compose up --build
 ```
 
 Expected services:
@@ -44,6 +44,8 @@ Expected services:
 - PostgreSQL 16 (data volume persisted)
 
 Ports are configurable in `.env.local` (e.g., `PORT_WEB`, `PORT_API`).
+
+Run `npm run smoke` to execute the automated smoke test (`docker compose up -d` + `/healthz` poll) and confirm the stack is healthy within five seconds.
 
 ## 2a) Database Migrations
 The API service applies database migrations at startup using Prisma:
@@ -77,11 +79,11 @@ This path requires a locally running Postgres and correct `.env.local` per this 
 
 ## 6) Stopping & Cleanup
 - Stop services: `Ctrl+C` in the Compose terminal
-- Remove containers: `docker compose -f infra/docker-compose.yml down`
+- Remove containers: `docker compose down`
 - Remove containers and volumes (data reset):
-  
-  ```bash
-  docker compose -f infra/docker-compose.yml down -v
+
+```bash
+docker compose down -v
   ```
 
 ## Next Steps

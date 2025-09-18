@@ -1,0 +1,23 @@
+{
+  "name": "@syncal/worker",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "main": "dist/main.js",
+  "types": "dist/main.d.ts",
+  "scripts": {
+    "dev": "tsx watch src/main.ts",
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/main.js"
+  },
+  "dependencies": {
+    "@prisma/client": "^6.16.2",
+    "@syncal/config": "file:../../packages/config",
+    "@syncal/core": "file:../../packages/core",
+    "pino": "^9.10.0"
+  },
+  "devDependencies": {
+    "tsx": "^4.19.2",
+    "typescript": "^5.9.2"
+  }
+}

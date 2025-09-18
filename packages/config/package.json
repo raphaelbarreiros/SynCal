@@ -1,0 +1,26 @@
+{
+  "name": "@syncal/config",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "@fastify/env": "^5.0.2",
+    "dotenv-flow": "^4.0.3",
+    "pino": "^9.10.0",
+    "zod": "^4.0.0"
+  }
+}
