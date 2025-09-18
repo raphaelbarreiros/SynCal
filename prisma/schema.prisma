@@ -1,0 +1,224 @@
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum ConnectorType {
+  google
+  microsoft
+  html_ics
+  imap
+  self_managed
+}
+
+enum ConnectorStatus {
+  pending_validation
+  validated
+  disabled
+}
+
+enum PrivacyMode {
+  original_title
+  busy_placeholder
+}
+
+enum SyncJobStatus {
+  pending
+  in_progress
+  retrying
+  failed
+  completed
+}
+
+enum SyncJobOutcome {
+  success
+  partial
+  failure
+}
+
+enum AlertSeverity {
+  info
+  warning
+  critical
+}
+
+model AdminUser {
+  id           String      @id @default(uuid()) @db.Uuid
+  email        String      @unique @db.Citext
+  passwordHash String      @map("password_hash")
+  createdAt    DateTime    @default(now()) @map("created_at")
+  updatedAt    DateTime    @updatedAt @map("updated_at")
+
+  connectors   Connector[]
+  auditLogs    AuditLog[]  @relation("AuditActor")
+
+  @@map("admin_users")
+}
+
+model Connector {
+  id                   String             @id @default(uuid()) @db.Uuid
+  ownerId              String             @map("owner_id") @db.Uuid
+  type                 ConnectorType
+  displayName          String?            @map("display_name")
+  status               ConnectorStatus    @default(pending_validation)
+  credentialsEncrypted Bytes              @map("credentials_encrypted")
+  configJson           Json               @map("config_json")
+  lastValidatedAt      DateTime?          @map("last_validated_at")
+  createdAt            DateTime           @default(now()) @map("created_at")
+  updatedAt            DateTime           @updatedAt @map("updated_at")
+
+  owner                AdminUser          @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  calendars            Calendar[]
+  syncJobs             SyncJob[]
+  jobLogs              SyncJobLog[]       @relation("LogConnector")
+  eventMappings        EventMapping[]     @relation("ConnectorMappings")
+  alerts               Alert[]
+
+  @@map("connectors")
+  @@index([ownerId], map: "connectors_owner_idx")
+}
+
+model Calendar {
+  id                 String            @id @default(uuid()) @db.Uuid
+  connectorId        String            @map("connector_id") @db.Uuid
+  providerCalendarId String            @map("provider_calendar_id")
+  displayName        String?           @map("display_name")
+  privacyMode        PrivacyMode       @map("privacy_mode")
+  metadata           Json              @map("metadata")
+  createdAt          DateTime          @default(now()) @map("created_at")
+  updatedAt          DateTime          @updatedAt @map("updated_at")
+
+  connector          Connector         @relation(fields: [connectorId], references: [id], onDelete: Cascade)
+  primaryPairs       SyncPair[]        @relation("PrimaryCalendar")
+  secondaryPairs     SyncPair[]        @relation("SecondaryCalendar")
+  sourceEventMaps    EventMapping[]    @relation("EventSourceCalendar")
+  mirrorEventMaps    EventMapping[]    @relation("EventMirrorCalendar")
+
+  @@map("calendars")
+  @@unique([connectorId, providerCalendarId], map: "calendars_connector_id_provider_calendar_id_key")
+  @@index([connectorId], map: "calendars_connector_idx")
+}
+
+model SyncPair {
+  id                  String          @id @default(uuid()) @db.Uuid
+  primaryCalendarId   String          @map("primary_calendar_id") @db.Uuid
+  secondaryCalendarId String          @map("secondary_calendar_id") @db.Uuid
+  fallbackOrder       String[]        @map("fallback_order") @db.Uuid @default([])
+  active              Boolean         @default(true)
+  createdAt           DateTime        @default(now()) @map("created_at")
+  updatedAt           DateTime        @updatedAt @map("updated_at")
+
+  primaryCalendar     Calendar        @relation("PrimaryCalendar", fields: [primaryCalendarId], references: [id], onDelete: Cascade)
+  secondaryCalendar   Calendar        @relation("SecondaryCalendar", fields: [secondaryCalendarId], references: [id], onDelete: Cascade)
+  syncJobs            SyncJob[]
+  jobLogs             SyncJobLog[]    @relation("LogPair")
+  eventMappings       EventMapping[]  @relation("PairMappings")
+  alerts              Alert[]
+
+  @@map("sync_pairs")
+  @@unique([primaryCalendarId, secondaryCalendarId], map: "sync_pairs_unique_pair")
+  @@index([active], map: "sync_pairs_active_idx")
+}
+
+model SyncJob {
+  id          String        @id @default(uuid()) @db.Uuid
+  pairId      String        @map("pair_id") @db.Uuid
+  connectorId String        @map("connector_id") @db.Uuid
+  windowStart DateTime      @map("window_start")
+  windowEnd   DateTime      @map("window_end")
+  payload     Json
+  status      SyncJobStatus @default(pending)
+  priority    Int           @default(0)
+  retryCount  Int           @map("retry_count") @default(0)
+  maxRetries  Int           @map("max_retries") @default(5)
+  nextRunAt   DateTime      @map("next_run_at") @default(now())
+  lastError   String?       @map("last_error")
+  createdAt   DateTime      @default(now()) @map("created_at")
+  updatedAt   DateTime      @updatedAt @map("updated_at")
+
+  pair        SyncPair      @relation(fields: [pairId], references: [id], onDelete: Cascade)
+  connector   Connector     @relation(fields: [connectorId], references: [id], onDelete: Cascade)
+  logs        SyncJobLog[]  @relation("LogJob")
+
+  @@map("sync_jobs")
+  @@index([status, nextRunAt], map: "sync_jobs_lookup_idx")
+  @@index([pairId], map: "sync_jobs_pair_idx")
+}
+
+model SyncJobLog {
+  id             String          @id @default(uuid()) @db.Uuid
+  jobId          String          @map("job_id") @db.Uuid
+  pairId         String          @map("pair_id") @db.Uuid
+  connectorId    String          @map("connector_id") @db.Uuid
+  startedAt      DateTime        @map("started_at")
+  finishedAt     DateTime        @map("finished_at")
+  processedEvents Int            @map("processed_events") @default(0)
+  failedEvents   Int             @map("failed_events") @default(0)
+  outcome        SyncJobOutcome
+  errorSummary   String?         @map("error_summary")
+
+  job            SyncJob         @relation("LogJob", fields: [jobId], references: [id], onDelete: Cascade)
+  pair           SyncPair        @relation("LogPair", fields: [pairId], references: [id], onDelete: Cascade)
+  connector      Connector       @relation("LogConnector", fields: [connectorId], references: [id], onDelete: Cascade)
+
+  @@map("sync_job_logs")
+  @@index([jobId], map: "sync_job_logs_job_idx")
+}
+
+model EventMapping {
+  id               String     @id @default(uuid()) @db.Uuid
+  pairId           String     @map("pair_id") @db.Uuid
+  sourceCalendarId String     @map("source_calendar_id") @db.Uuid
+  mirrorCalendarId String     @map("mirror_calendar_id") @db.Uuid
+  sourceEventId    String     @map("source_event_id")
+  mirrorEventId    String     @map("mirror_event_id")
+  connectorId      String     @map("connector_id") @db.Uuid
+  lastSyncedAt     DateTime   @map("last_synced_at") @default(now())
+
+  pair             SyncPair   @relation("PairMappings", fields: [pairId], references: [id], onDelete: Cascade)
+  sourceCalendar   Calendar   @relation("EventSourceCalendar", fields: [sourceCalendarId], references: [id], onDelete: Cascade)
+  mirrorCalendar   Calendar   @relation("EventMirrorCalendar", fields: [mirrorCalendarId], references: [id], onDelete: Cascade)
+  connector        Connector  @relation("ConnectorMappings", fields: [connectorId], references: [id], onDelete: Cascade)
+
+  @@map("event_mappings")
+  @@unique([sourceCalendarId, sourceEventId], map: "event_mappings_source_calendar_id_source_event_id_key")
+  @@index([pairId], map: "event_mappings_pair_idx")
+}
+
+model AuditLog {
+  id         String     @id @default(uuid()) @db.Uuid
+  actorId    String?    @map("actor_id") @db.Uuid
+  action     String
+  entityType String?    @map("entity_type")
+  entityId   String?    @map("entity_id") @db.Uuid
+  metadata   Json       @map("metadata")
+  createdAt  DateTime   @default(now()) @map("created_at")
+
+  actor      AdminUser? @relation("AuditActor", fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@map("audit_logs")
+  @@index([actorId], map: "audit_logs_actor_idx")
+  @@index([entityType, entityId], map: "audit_logs_entity_idx")
+}
+
+model Alert {
+  id           String         @id @default(uuid()) @db.Uuid
+  pairId       String?        @map("pair_id") @db.Uuid
+  connectorId  String?        @map("connector_id") @db.Uuid
+  category     String
+  severity     AlertSeverity
+  message      String
+  acknowledged Boolean        @default(false)
+  createdAt    DateTime       @default(now()) @map("created_at")
+
+  pair         SyncPair?      @relation(fields: [pairId], references: [id], onDelete: Cascade)
+  connector    Connector?     @relation(fields: [connectorId], references: [id], onDelete: Cascade)
+
+  @@map("alerts")
+  @@index([acknowledged, severity], map: "alerts_active_idx")
+}

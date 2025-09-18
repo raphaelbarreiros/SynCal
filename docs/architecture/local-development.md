@@ -19,8 +19,10 @@ This guide explains how to run SynCal locally, configure environment variables, 
    ```bash
    # Examples (do not paste literally into Git)
    openssl rand -base64 32   # for SESSION_SECRET
-   openssl rand -base64 32   # for ENCRYPTION_MASTER_KEY (store as base64)
+   openssl rand -base64 32   # for ENCRYPTION_KEY (store as base64)
    ```
+
+   Set `INITIAL_ADMIN` to the email address that should receive the first administrator account.
 
 3. Optional: Set up Google/Microsoft OAuth now or later. Follow:
    
@@ -28,13 +30,13 @@ This guide explains how to run SynCal locally, configure environment variables, 
 
 Notes:
 - Do not commit `.env.local`. The repo `.gitignore` already excludes env files.
-- For first boot, `ADMIN_EMAIL` and `ADMIN_PASSWORD` in the env file allow creating the initial admin account.
+- For first boot, `INITIAL_ADMIN` seeds the portal with the chosen administrator email.
 
 ## 2) Start the Stack (Docker Compose)
-The architecture references a Compose file at `infra/docker-compose.yml`. Once present, start services with:
+The Compose file lives at the repository root. Start services with:
 
 ```bash
-docker compose -f infra/docker-compose.yml up --build
+docker compose up --build
 ```
 
 Expected services:
@@ -44,6 +46,8 @@ Expected services:
 - PostgreSQL 16 (data volume persisted)
 
 Ports are configurable in `.env.local` (e.g., `PORT_WEB`, `PORT_API`).
+
+Run `npm run smoke` to execute the automated smoke test (`docker compose up -d` + `/healthz` poll) and confirm the stack is healthy within five seconds.
 
 ## 2a) Database Migrations
 The API service applies database migrations at startup using Prisma:
@@ -58,14 +62,13 @@ Requirements:
 
 ## 3) First-Run Verification
 - API health: `GET http://localhost:3001/healthz` → 200 OK
-- Metrics (optional): `GET http://localhost:3001/metrics`
-- Portal login: Visit `http://localhost:3000`, sign in with the admin credentials seeded via env
+- Portal login: Visit `http://localhost:3000`, sign in with the admin address configured via `INITIAL_ADMIN`
 - Worker: Check container logs for heartbeat and job polling messages
 
 ## 4) Troubleshooting
 - Ports in use: Change `PORT_WEB` or `PORT_API` in `.env.local` and restart Compose
 - Database connection errors: Verify `DATABASE_URL` and that Postgres container is healthy
-- Encryption key errors: Ensure `ENCRYPTION_MASTER_KEY` is set and base64-encoded
+- Encryption key errors: Ensure `ENCRYPTION_KEY` is set and base64-encoded
 - OAuth callback mismatch: Double‑check redirect URIs match your `*_REDIRECT_URI` env values
 
 ## 5) Running Without Docker (optional; when monorepo scaffolds exist)
@@ -77,11 +80,11 @@ This path requires a locally running Postgres and correct `.env.local` per this 
 
 ## 6) Stopping & Cleanup
 - Stop services: `Ctrl+C` in the Compose terminal
-- Remove containers: `docker compose -f infra/docker-compose.yml down`
+- Remove containers: `docker compose down`
 - Remove containers and volumes (data reset):
-  
-  ```bash
-  docker compose -f infra/docker-compose.yml down -v
+
+```bash
+docker compose down -v
   ```
 
 ## Next Steps

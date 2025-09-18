@@ -2,8 +2,16 @@
   "extends": "@tsconfig/next/tsconfig.json",
   "compilerOptions": {
     "strict": true,
-    "baseUrl": "."
+    "baseUrl": ".",
+    "target": "ES2017"
   },
-  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx"],
-  "exclude": ["node_modules"]
+  "include": [
+    "**/*.ts",
+    "**/*.tsx",
+    "next-env.d.ts",
+    ".next/types/**/*.ts"
+  ],
+  "exclude": [
+    "node_modules"
+  ]
 }

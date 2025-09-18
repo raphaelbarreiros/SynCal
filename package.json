@@ -1,13 +1,26 @@
 {
   "name": "syncal",
   "private": true,
+  "type": "module",
   "workspaces": [
     "apps/*",
     "packages/*"
   ],
   "scripts": {
-    "lint": "echo 'no lint yet'",
-    "build": "echo 'root build placeholder'",
-    "test": "echo 'no tests yet'"
+    "build": "npm run build --workspaces",
+    "dev:api": "npm run dev --workspace @syncal/api",
+    "dev:web": "npm run dev --workspace @syncal/web",
+    "dev:worker": "npm run dev --workspace @syncal/worker",
+    "lint": "echo 'lint pipeline not yet configured'",
+    "prisma:generate": "prisma generate",
+    "prisma:migrate:deploy": "prisma migrate deploy",
+    "smoke": "node scripts/smoke.mjs",
+    "test": "vitest --run"
+  },
+  "devDependencies": {
+    "@types/node": "^22.7.5",
+    "prisma": "^6.16.2",
+    "typescript": "^5.9.2",
+    "vitest": "^3.2.4"
   }
 }

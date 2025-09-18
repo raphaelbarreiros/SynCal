@@ -2,8 +2,8 @@
 
 ### Infrastructure as Code
 - **Tool:** Docker Compose v2.39.3
-- **Location:** `infra/docker-compose.yml`
-- **Approach:** Declarative Compose file defining web, api, worker, postgres, and optional observability services; environment-specific overrides via `docker-compose.override.yml`. No CDN in MVP; portal serves static assets directly.
+- **Location:** `docker-compose.yml`
+- **Approach:** Declarative Compose file defining web, api, worker, postgres, and optional observability services. Environment-specific overrides can live in `docker-compose.override.yml`. No CDN in MVP; portal serves static assets directly.
 
 ### Deployment Strategy
 - **Strategy:** Single-host Docker Compose deployment with environment-specific `.env` files and secrets injection.
@@ -14,7 +14,7 @@
   - Nightly/Staging: `e2e` against staging stack; manual approval before prod deploy
 
 ### Environments
-- **Development:** Local Docker Compose stack using hot reload volumes, seeded Postgres, and mocked provider credentials.
+- **Development:** Local Docker Compose stack using the root `docker-compose.yml`, seeded Postgres, and mocked provider credentials. A helper script `npm run smoke` boots the stack and verifies API readiness via `/healthz` within five seconds.
 - **Staging:** Optional VPS Compose deployment mirroring production config; uses staging OAuth credentials and real provider sandboxes.
 - **Production:** Hardened VPS/VM with Compose stack, TLS termination via Caddy/Traefik reverse proxy, persistent volumes and offsite Postgres backups.
 
