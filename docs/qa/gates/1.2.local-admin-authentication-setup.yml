@@ -1,0 +1,51 @@
+schema: 1
+story: "1.2"
+story_title: "Local Admin Authentication Setup"
+gate: "FAIL"
+status_reason: "Portal middleware only checks for the presence of syn_session, so forged or stale cookies bypass the login redirect (AC2)."
+reviewer: "Quinn (Test Architect)"
+updated: "2025-09-19T09:11:19Z"
+quality_score: 80
+waiver:
+  active: false
+top_issues:
+  - severity: high
+    summary: "Portal middleware trusts cookie presence without verifying server session"
+    detail: "Any user can craft a syn_session cookie (or reuse a stale cookie after session store reset) and reach protected Next.js routes without authenticating."
+    refs:
+      - apps/web/middleware.ts:12
+    suggested_owner: dev
+risk_summary:
+  totals: { critical: 0, high: 1, medium: 0, low: 0 }
+  recommendations:
+    must_fix:
+      - "Validate sessions server-side in middleware before allowing portal routes."
+    monitor: []
+evidence:
+  tests_reviewed: 7
+  risks_identified: 1
+  trace:
+    ac_covered: [1, 3, 4]
+    ac_gaps: [2]
+nfr_validation:
+  security:
+    status: FAIL
+    notes: "Authentication gate bypass via forged cookie."
+  performance:
+    status: PASS
+    notes: "No performance regressions observed."
+  reliability:
+    status: PASS
+    notes: "Session bootstrap and API flows stable aside from gate issue."
+  maintainability:
+    status: PASS
+    notes: "Code structure clear; fix isolated to middleware logic."
+recommendations:
+  immediate:
+    - action: "Have middleware call an authenticated heartbeat (or check signed session claims) before granting portal access."
+      refs:
+        - apps/web/middleware.ts:12
+  future:
+    - action: "Add e2e coverage for forged/expired session cookies redirecting to /login."
+      refs:
+        - apps/web/tests/e2e/authentication.spec.ts:5
