@@ -1,8 +1,14 @@
 import Fastify from 'fastify';
 import { createLogger, loadEnv, registerConfig, type AppEnv } from '@syncal/config';
 import prismaPlugin from './plugins/prisma.js';
+import repositoriesPlugin from './plugins/repositories.js';
+import sessionPlugin from './plugins/session.js';
+import securityPlugin from './plugins/security.js';
+import authGuardPlugin from './plugins/auth-guard.js';
 import { runMigrations } from './lib/migrate.js';
+import { ensureInitialAdmin } from './lib/bootstrap-admin.js';
 import { healthRoutes } from './routes/health.js';
+import { sessionRoutes } from './routes/auth/session.js';
 
 const logger = createLogger({ service: 'api' });
 
@@ -13,7 +19,12 @@ export async function buildServer(env: AppEnv) {
 
   await registerConfig(app);
   await app.register(prismaPlugin);
+  await app.register(repositoriesPlugin);
+  await app.register(sessionPlugin);
+  await app.register(securityPlugin);
+  await app.register(authGuardPlugin);
   await app.register(healthRoutes);
+  await app.register(sessionRoutes);
 
   return app;
 }
@@ -24,6 +35,8 @@ export async function start(): Promise<void> {
 
   try {
     await runMigrations(logger, env);
+    await app.ready();
+    await ensureInitialAdmin(app, env);
     await app.listen({ port: env.PORT, host: '0.0.0.0' });
     logger.info({ port: env.PORT }, 'API listening');
   } catch (err) {

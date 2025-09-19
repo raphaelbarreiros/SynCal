@@ -1,0 +1,42 @@
+schema: 1
+story: "1.2"
+story_title: "Local Admin Authentication Setup"
+gate: "PASS"
+status_reason: "Middleware now validates admin sessions against the API, blocking forged cookies and keeping bootstrap idempotent."
+reviewer: "Quinn (Test Architect)"
+updated: "2025-09-19T09:52:49Z"
+quality_score: 100
+waiver:
+  active: false
+top_issues: []
+risk_summary:
+  totals: { critical: 0, high: 0, medium: 0, low: 1 }
+  recommendations:
+    must_fix: []
+    monitor:
+      - "Add e2e coverage for forged/expired session cookies redirecting to /login."
+evidence:
+  tests_reviewed: 8
+  risks_identified: 0
+  trace:
+    ac_covered: [1, 2, 3, 4]
+    ac_gaps: []
+nfr_validation:
+  security:
+    status: PASS
+    notes: "Middleware now depends on the API to confirm sessions and clears stale cookies."
+  performance:
+    status: PASS
+    notes: "Validation fetch adds minor overhead; monitor latency in production."
+  reliability:
+    status: PASS
+    notes: "Bootstrap handles unique constraint races; integration tests cover session flows."
+  maintainability:
+    status: PASS
+    notes: "Implementation follows documented patterns and is well-tested."
+recommendations:
+  immediate: []
+  future:
+    - action: "Extend Playwright suite with forged/expired session cookie scenario to guard against regressions."
+      refs:
+        - apps/web/tests/e2e/authentication.spec.ts:5

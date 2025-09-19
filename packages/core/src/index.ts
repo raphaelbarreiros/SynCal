@@ -7,3 +7,5 @@ export interface HealthResponse {
   time: string;
   reason?: string;
 }
+
+export * from './dtos/auth.js';
