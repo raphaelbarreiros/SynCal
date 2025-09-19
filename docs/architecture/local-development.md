@@ -22,7 +22,7 @@ This guide explains how to run SynCal locally, configure environment variables, 
    openssl rand -base64 32   # for ENCRYPTION_KEY (store as base64)
    ```
 
-   Set `INITIAL_ADMIN` to the email address that should receive the first administrator account.
+   Set `INITIAL_ADMIN_EMAIL` to the email address that should receive the first administrator account. Optionally set `INITIAL_ADMIN_PASSWORD` for non-interactive startup; omit it to be prompted securely on first boot.
 
 3. Optional: Set up Google/Microsoft OAuth now or later. Follow:
    
@@ -30,7 +30,7 @@ This guide explains how to run SynCal locally, configure environment variables, 
 
 Notes:
 - Do not commit `.env.local`. The repo `.gitignore` already excludes env files.
-- For first boot, `INITIAL_ADMIN` seeds the portal with the chosen administrator email.
+- For first boot, `INITIAL_ADMIN_EMAIL` seeds the portal with the chosen administrator email (with an optional password if `INITIAL_ADMIN_PASSWORD` is provided).
 
 ## 2) Start the Stack (Docker Compose)
 The Compose file lives at the repository root. Start services with:
@@ -62,7 +62,7 @@ Requirements:
 
 ## 3) First-Run Verification
 - API health: `GET http://localhost:3001/healthz` → 200 OK
-- Portal login: Visit `http://localhost:3000`, sign in with the admin address configured via `INITIAL_ADMIN`
+- Portal login: Visit `http://localhost:3000`, sign in with the admin address configured via `INITIAL_ADMIN_EMAIL`
 - Worker: Check container logs for heartbeat and job polling messages
 
 ## 4) Troubleshooting

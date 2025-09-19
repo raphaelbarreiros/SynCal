@@ -21,9 +21,14 @@ const zEnvSchema = z.object({
   ENCRYPTION_KEY: z
     .string()
     .min(32, 'ENCRYPTION_KEY must be at least 32 characters'),
-  INITIAL_ADMIN: z
+  INITIAL_ADMIN_EMAIL: z
     .string()
-    .min(3, 'INITIAL_ADMIN must be provided'),
+    .email('INITIAL_ADMIN_EMAIL must be a valid email address')
+    .optional(),
+  INITIAL_ADMIN_PASSWORD: z
+    .string()
+    .min(12, 'INITIAL_ADMIN_PASSWORD must be at least 12 characters')
+    .optional(),
   LOG_LEVEL: z
     .string()
     .default('info'),
@@ -34,7 +39,7 @@ export type AppEnv = z.infer<typeof zEnvSchema>;
 
 const fastifyEnvSchema = {
   type: 'object',
-  required: ['DATABASE_URL', 'SESSION_SECRET', 'ENCRYPTION_KEY', 'INITIAL_ADMIN'],
+  required: ['DATABASE_URL', 'SESSION_SECRET', 'ENCRYPTION_KEY'],
   properties: {
     NODE_ENV: {
       type: 'string',
@@ -55,8 +60,12 @@ const fastifyEnvSchema = {
       type: 'string',
       minLength: 32
     },
-    INITIAL_ADMIN: {
+    INITIAL_ADMIN_EMAIL: {
       type: 'string'
+    },
+    INITIAL_ADMIN_PASSWORD: {
+      type: 'string',
+      minLength: 12
     },
     LOG_LEVEL: {
       type: 'string',

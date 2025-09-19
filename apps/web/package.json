@@ -7,6 +7,7 @@
     "dev": "next dev -p 3000",
     "build": "next build",
     "start": "next start -p 3000",
+    "test:e2e": "playwright test",
     "ladle": "ladle serve",
     "ladle:build": "ladle build",
     "ladle:preview": "ladle preview"
@@ -21,6 +22,7 @@
     "@types/react": "^19.0.1",
     "@types/react-dom": "^19.0.1",
     "@tsconfig/next": "^2.0.3",
+    "@playwright/test": "^1.55.0",
     "autoprefixer": "^10.4.20",
     "postcss": "^8.4.47",
     "tailwindcss": "^4.1.13",

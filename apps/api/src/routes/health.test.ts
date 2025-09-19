@@ -9,7 +9,8 @@ const baseEnv: AppEnv = {
   DATABASE_URL: 'postgresql://user:pass@localhost:5432/db',
   SESSION_SECRET: 'x'.repeat(32),
   ENCRYPTION_KEY: 'y'.repeat(32),
-  INITIAL_ADMIN: 'admin@example.com',
+  INITIAL_ADMIN_EMAIL: undefined,
+  INITIAL_ADMIN_PASSWORD: undefined,
   LOG_LEVEL: 'info',
   WORKER_HEARTBEAT_INTERVAL_MS: 5000
 };
