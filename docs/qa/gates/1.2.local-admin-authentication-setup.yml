@@ -1,51 +1,42 @@
 schema: 1
 story: "1.2"
 story_title: "Local Admin Authentication Setup"
-gate: "FAIL"
-status_reason: "Portal middleware only checks for the presence of syn_session, so forged or stale cookies bypass the login redirect (AC2)."
+gate: "PASS"
+status_reason: "Middleware now validates admin sessions against the API, blocking forged cookies and keeping bootstrap idempotent."
 reviewer: "Quinn (Test Architect)"
-updated: "2025-09-19T09:11:19Z"
-quality_score: 80
+updated: "2025-09-19T09:52:49Z"
+quality_score: 100
 waiver:
   active: false
-top_issues:
-  - severity: high
-    summary: "Portal middleware trusts cookie presence without verifying server session"
-    detail: "Any user can craft a syn_session cookie (or reuse a stale cookie after session store reset) and reach protected Next.js routes without authenticating."
-    refs:
-      - apps/web/middleware.ts:12
-    suggested_owner: dev
+top_issues: []
 risk_summary:
-  totals: { critical: 0, high: 1, medium: 0, low: 0 }
+  totals: { critical: 0, high: 0, medium: 0, low: 1 }
   recommendations:
-    must_fix:
-      - "Validate sessions server-side in middleware before allowing portal routes."
-    monitor: []
+    must_fix: []
+    monitor:
+      - "Add e2e coverage for forged/expired session cookies redirecting to /login."
 evidence:
-  tests_reviewed: 7
-  risks_identified: 1
+  tests_reviewed: 8
+  risks_identified: 0
   trace:
-    ac_covered: [1, 3, 4]
-    ac_gaps: [2]
+    ac_covered: [1, 2, 3, 4]
+    ac_gaps: []
 nfr_validation:
   security:
-    status: FAIL
-    notes: "Authentication gate bypass via forged cookie."
+    status: PASS
+    notes: "Middleware now depends on the API to confirm sessions and clears stale cookies."
   performance:
     status: PASS
-    notes: "No performance regressions observed."
+    notes: "Validation fetch adds minor overhead; monitor latency in production."
   reliability:
     status: PASS
-    notes: "Session bootstrap and API flows stable aside from gate issue."
+    notes: "Bootstrap handles unique constraint races; integration tests cover session flows."
   maintainability:
     status: PASS
-    notes: "Code structure clear; fix isolated to middleware logic."
+    notes: "Implementation follows documented patterns and is well-tested."
 recommendations:
-  immediate:
-    - action: "Have middleware call an authenticated heartbeat (or check signed session claims) before granting portal access."
-      refs:
-        - apps/web/middleware.ts:12
+  immediate: []
   future:
-    - action: "Add e2e coverage for forged/expired session cookies redirecting to /login."
+    - action: "Extend Playwright suite with forged/expired session cookie scenario to guard against regressions."
       refs:
         - apps/web/tests/e2e/authentication.spec.ts:5
