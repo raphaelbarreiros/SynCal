@@ -9,6 +9,7 @@ import securityPlugin from '../../src/plugins/security.js';
 import authGuardPlugin from '../../src/plugins/auth-guard.js';
 import { sessionRoutes } from '../../src/routes/auth/session.js';
 import { hashPassword } from '../../src/services/password.js';
+import type { AdminSession } from '../../src/lib/session.js';
 
 const baseEnv: AppEnv = {
   NODE_ENV: 'test',
@@ -228,6 +229,72 @@ describe('Auth session routes', () => {
     });
 
     expect(logoutResponse.statusCode).toBe(204);
+  });
+
+  it('returns session details when authenticated', async () => {
+    context = await createTestApp();
+    const password = 'AdminPassword123!';
+    const passwordHash = await hashPassword(password);
+    const admin: AdminUser = {
+      id: '00000000-0000-0000-0000-000000000001',
+      email: 'admin@example.com',
+      passwordHash,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+
+    context.adminRepo.findByEmail.mockResolvedValue(admin);
+
+    const csrfResponse = await context.app.inject({ method: 'GET', url: '/auth/csrf' });
+    const csrfToken = csrfResponse.json<{ token: string }>().token;
+    const csrfCookies = extractCookies(csrfResponse);
+
+    const loginPayload = JSON.stringify({
+      email: 'admin@example.com',
+      password
+    });
+
+    const loginResponse = await context.app.inject({
+      method: 'POST',
+      url: '/auth/session',
+      headers: {
+        'content-type': 'application/json',
+        'content-length': Buffer.byteLength(loginPayload).toString(),
+        'x-csrf-token': csrfToken,
+        cookie: csrfCookies
+      },
+      body: loginPayload
+    });
+
+    expect(loginResponse.statusCode).toBe(204);
+    const sessionCookies = extractCookies(loginResponse);
+
+    const sessionResponse = await context.app.inject({
+      method: 'GET',
+      url: '/auth/session',
+      headers: {
+        cookie: sessionCookies
+      }
+    });
+
+    expect(sessionResponse.statusCode).toBe(200);
+    const payload = sessionResponse.json<{ admin: AdminSession }>();
+    expect(payload.admin).toMatchObject({
+      id: admin.id,
+      email: admin.email
+    });
+    expect(typeof payload.admin.issuedAt).toBe('string');
+  });
+
+  it('returns 401 when reading session without authentication', async () => {
+    context = await createTestApp();
+
+    const response = await context.app.inject({
+      method: 'GET',
+      url: '/auth/session'
+    });
+
+    expect(response.statusCode).toBe(401);
   });
 
   it('returns 401 when deleting a session without authentication', async () => {

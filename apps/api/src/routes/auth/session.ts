@@ -57,6 +57,16 @@ export async function sessionRoutes(fastify: FastifyInstance): Promise<void> {
     }
   );
 
+  fastify.get(
+    '/auth/session',
+    {
+      onRequest: [fastify.requireAdmin]
+    },
+    async function (request, reply) {
+      return reply.status(200).send({ admin: request.admin });
+    }
+  );
+
   fastify.get('/auth/csrf', async function (_request, reply) {
     const token = await reply.generateCsrf();
     return reply.status(200).send({ token });
