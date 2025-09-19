@@ -1,6 +1,7 @@
 import readline from 'node:readline';
 import { stdin as input, stdout as output } from 'node:process';
 import { LoginRequestSchema } from '@syncal/core';
+import { Prisma } from '@prisma/client';
 import type { FastifyInstance } from 'fastify';
 import type { AppEnv } from '@syncal/config';
 import { hashPassword } from '../services/password.js';
@@ -103,6 +104,10 @@ async function resolveCredentials(app: FastifyInstance, env: AppEnv): Promise<Bo
   return promptForCredentials();
 }
 
+function isUniqueConstraintError(error: unknown): error is Prisma.PrismaClientKnownRequestError {
+  return error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002';
+}
+
 export async function ensureInitialAdmin(app: FastifyInstance, env: AppEnv): Promise<void> {
   const existingAdmins = await app.repos.adminUsers.count();
   if (existingAdmins > 0) {
@@ -113,27 +118,46 @@ export async function ensureInitialAdmin(app: FastifyInstance, env: AppEnv): Pro
   const credentials = await resolveCredentials(app, env);
   const passwordHash = await hashPassword(credentials.password);
 
-  const admin = await app.repos.adminUsers.create({
-    email: credentials.email,
-    passwordHash
-  });
+  try {
+    const admin = await app.repos.adminUsers.create({
+      email: credentials.email,
+      passwordHash
+    });
 
-  await app.repos.auditLogs.create({
-    actorId: admin.id,
-    action: 'admin.bootstrap',
-    entityType: 'admin_user',
-    entityId: admin.id,
-    metadata: {
-      method: credentials.source
+    await app.repos.auditLogs.create({
+      actorId: admin.id,
+      action: 'admin.bootstrap',
+      entityType: 'admin_user',
+      entityId: admin.id,
+      metadata: {
+        method: credentials.source
+      }
+    });
+
+    app.log.info(
+      {
+        event: 'admin_bootstrap',
+        email: maskEmail(credentials.email),
+        method: credentials.source
+      },
+      'Initial admin account created'
+    );
+  } catch (error) {
+    if (isUniqueConstraintError(error)) {
+      const existingAdmin = await app.repos.adminUsers.findByEmail(credentials.email);
+      if (existingAdmin) {
+        app.log.info(
+          {
+            event: 'admin_bootstrap_race',
+            email: maskEmail(credentials.email),
+            method: credentials.source
+          },
+          'Initial admin already created by another instance; skipping bootstrap'
+        );
+        return;
+      }
     }
-  });
 
-  app.log.info(
-    {
-      event: 'admin_bootstrap',
-      email: maskEmail(credentials.email),
-      method: credentials.source
-    },
-    'Initial admin account created'
-  );
+    throw error;
+  }
 }
