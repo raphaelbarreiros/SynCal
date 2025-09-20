@@ -24,13 +24,13 @@ function buildLoginRedirect(request: NextRequest): NextResponse {
   }
 
   const response = NextResponse.redirect(loginUrl);
-  response.cookies.delete(SESSION_COOKIE, { path: '/' });
+  response.cookies.delete({ name: SESSION_COOKIE, path: '/' });
   return response;
 }
 
 function continueRequestClearingSession(): NextResponse {
   const response = NextResponse.next();
-  response.cookies.delete(SESSION_COOKIE, { path: '/' });
+  response.cookies.delete({ name: SESSION_COOKIE, path: '/' });
   return response;
 }
 

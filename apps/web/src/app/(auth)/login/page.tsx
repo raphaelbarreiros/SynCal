@@ -1,3 +1,4 @@
+import { Suspense } from 'react';
 import LoginForm from '../../../components/login-form';
 
 export const metadata = {
@@ -14,7 +15,15 @@ export default function LoginPage() {
             Enter your administrator credentials to manage connectors and calendars.
           </p>
         </header>
-        <LoginForm />
+        <Suspense
+          fallback={
+            <p className="text-center text-sm text-slate-400" role="status">
+              Preparing secure login…
+            </p>
+          }
+        >
+          <LoginForm />
+        </Suspense>
       </div>
     </section>
   );
