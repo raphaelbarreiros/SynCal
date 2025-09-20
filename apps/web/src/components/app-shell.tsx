@@ -187,7 +187,7 @@ function MobileNavigation({ isOpen, onClose, items, currentPath }: MobileNavProp
 
 function DesktopSidebar({ items, currentPath }: { items: NavItem[]; currentPath: string }) {
   return (
-    <aside className="hidden w-72 flex-col border-r border-slate-200 bg-white/80 backdrop-blur-md dark:border-slate-800 dark:bg-slate-900/70 md:flex">
+    <aside className="hidden w-72 flex-col border-r border-slate-200 bg-white/80 backdrop-blur-md dark:border-slate-800 dark:bg-slate-900/70 lg:flex">
       <div className="flex h-16 items-center border-b border-slate-200 px-6 dark:border-slate-800">
         <div>
           <p className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">SynCal</p>
@@ -220,7 +220,7 @@ function Header({ onOpenMobile, isMobileNavOpen }: { onOpenMobile: () => void; i
           <button
             type="button"
             onClick={onOpenMobile}
-            className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-slate-300 bg-white text-slate-700 shadow-sm transition hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800 md:hidden"
+          className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-slate-300 bg-white text-slate-700 shadow-sm transition hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800 lg:hidden"
             aria-label="Open navigation"
             aria-expanded={isMobileNavOpen}
             aria-controls="mobile-navigation"

@@ -23,17 +23,9 @@ const STORAGE_KEY = 'syn-theme-preference';
 
 const ThemeContext = createContext<ThemeProviderValue | null>(null);
 
-function getPreferredSystemTheme(): 'light' | 'dark' {
-  if (typeof window === 'undefined') {
-    return 'light';
-  }
-
-  return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-}
-
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [theme, setThemeState] = useState<ThemePreference>('system');
-  const [systemTheme, setSystemTheme] = useState<'light' | 'dark'>(() => getPreferredSystemTheme());
+  const [systemTheme, setSystemTheme] = useState<'light' | 'dark'>('light');
   const isMountedRef = useRef(false);
 
   useEffect(() => {

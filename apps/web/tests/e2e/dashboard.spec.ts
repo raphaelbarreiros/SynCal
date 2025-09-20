@@ -35,12 +35,18 @@ test.describe('Dashboard shell', () => {
     await expect(page.getByRole('status', { name: 'Calendars Synced' })).toBeVisible();
     await expect(page.getByRole('status', { name: 'Connectors Healthy' })).toBeVisible();
     await expect(page.getByRole('status', { name: 'Active Alerts' })).toBeVisible();
+
+    const calendarPlaceholder = page.getByRole('region', { name: 'Unified calendar overview' });
+    await expect(calendarPlaceholder.getByText('Connect your source and destination calendars')).toBeVisible();
+    await expect(
+      calendarPlaceholder.getByText('Tip: Privacy defaults to Busy titles.', { exact: false })
+    ).toBeVisible();
   });
 
   test('collapses navigation into the mobile sheet at narrow viewports', async ({ page }) => {
     await loginAsAdmin(page);
 
-    await page.setViewportSize({ width: 760, height: 900 });
+    await page.setViewportSize({ width: 768, height: 900 });
 
     const sidebar = page.locator('aside');
     await expect(sidebar).toBeHidden();
@@ -68,5 +74,18 @@ test.describe('Dashboard shell', () => {
     const results = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa']).analyze();
     const criticalViolations = results.violations.filter((violation) => violation.impact === 'critical');
     expect(criticalViolations).toHaveLength(0);
+  });
+
+  test('allows switching between light and dark themes', async ({ page }) => {
+    await loginAsAdmin(page);
+
+    const html = page.locator('html');
+    const toggle = page.getByRole('button', { name: 'Toggle theme' });
+
+    await toggle.click();
+    await page.waitForFunction(() => document.documentElement.classList.contains('dark'));
+
+    await toggle.click();
+    await page.waitForFunction(() => !document.documentElement.classList.contains('dark'));
   });
 });
