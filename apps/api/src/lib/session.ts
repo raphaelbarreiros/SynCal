@@ -1,5 +1,5 @@
 import type { FastifyRequest } from 'fastify';
-import type { Session } from '@fastify/session';
+import type { FastifySessionObject } from '@fastify/session';
 
 const ADMIN_SESSION_KEY = 'admin';
 
@@ -9,9 +9,15 @@ export interface AdminSession {
   issuedAt: string;
 }
 
-declare module '@fastify/session' {
+declare module 'fastify' {
   interface Session {
-    [ADMIN_SESSION_KEY]?: AdminSession;
+    admin?: AdminSession;
+  }
+}
+
+declare module '@fastify/session' {
+  interface FastifySessionObject {
+    admin?: AdminSession;
   }
 }
 
