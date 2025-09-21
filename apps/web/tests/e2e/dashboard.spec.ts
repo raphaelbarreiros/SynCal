@@ -9,8 +9,9 @@ async function loginAsAdmin(page: Page) {
   await page.goto('/login');
   await page.getByLabel('Email').fill(adminEmail);
   await page.getByLabel('Password').fill(adminPassword);
-  await page.getByRole('button', { name: 'Sign in' }).click();
-  await expect(page).toHaveURL('/');
+    await page.getByRole('button', { name: 'Sign in' }).click();
+    await expect(page).toHaveURL('/');
+    await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible();
 }
 
 test.describe('Dashboard shell', () => {

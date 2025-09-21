@@ -23,7 +23,7 @@ test.describe('Authentication flows', () => {
     await page.getByLabel('Password').fill(adminPassword);
     await page.getByRole('button', { name: 'Sign in' }).click();
 
-    await expect(page.getByRole('heading', { name: 'SynCal Portal' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible();
     await expect(page).not.toHaveURL(/\/(login)(\?|$)/);
 
     await page.getByRole('button', { name: 'Sign out' }).click();
