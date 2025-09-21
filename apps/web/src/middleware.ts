@@ -4,7 +4,7 @@ import type { NextRequest } from 'next/server';
 const LOGIN_PATH = '/login';
 const SESSION_COOKIE = 'syn_session';
 const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_BASE_URL ?? process.env.API_BASE_URL ?? 'http://localhost:3001';
+  process.env.NEXT_PUBLIC_API_BASE_URL ?? process.env.API_BASE_URL ?? 'http://api:3001';
 
 function shouldBypassAuth(pathname: string): boolean {
   return (
