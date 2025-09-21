@@ -57,7 +57,7 @@ async function hasValidSession(request: NextRequest): Promise<boolean> {
   }
 }
 
-export async function middleware(request: NextRequest) {
+export default async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   if (shouldBypassAuth(pathname)) {
@@ -84,7 +84,3 @@ export async function middleware(request: NextRequest) {
 
   return NextResponse.next();
 }
-
-export const config = {
-  matcher: ['/((?!_next/static|_next/image|favicon.ico|robots.txt|manifest.webmanifest|api).*)']
-};

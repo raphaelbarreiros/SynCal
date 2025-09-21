@@ -2,6 +2,8 @@ import { StatusCard } from '@syncal/ui';
 import { SyncTimelinePlaceholder } from 'src/components/dashboard/sync-timeline-placeholder';
 import { UnifiedCalendarPlaceholder } from 'src/components/dashboard/unified-calendar-placeholder';
 
+export const dynamic = 'force-dynamic';
+
 function CalendarIcon() {
   return (
     <svg

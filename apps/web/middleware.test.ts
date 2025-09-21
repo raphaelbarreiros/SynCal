@@ -1,6 +1,6 @@
 import { describe, it, expect, afterEach, vi } from 'vitest';
 import { NextRequest } from 'next/server';
-import { middleware } from './middleware';
+import middleware from './src/middleware';
 
 const SESSION_COOKIE = 'syn_session';
 
