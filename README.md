@@ -34,7 +34,20 @@ Code packages (`apps/web`, `apps/api`, `apps/worker`, `packages/*`) are defined 
    - Technical architecture: `docs/architecture/high-level-architecture.md`
    - UI specification: `docs/architecture/front-end-spec.md`
 2. **Prepare local prerequisites:** Install Docker Engine ≥ 26, Docker Compose v2.39.3, and Node.js 22 LTS (only required for non-Docker workflows). See `docs/architecture/local-development.md`.
-3. **Configure environment secrets:** Copy `.env.example` to `.env.local` and populate secrets following `docs/prd/provider-credentials-setup.md`.
+3. **Configure environment secrets:** Copy `.env.example` to `.env.local` and populate secrets following `docs/prd/provider-credentials-setup.md`. The Fastify API refuses to start unless the following OAuth variables are present:
+   ```bash
+   GOOGLE_CLIENT_ID=
+   GOOGLE_CLIENT_SECRET=
+   GOOGLE_REDIRECT_URI=http://localhost:3001/auth/google/callback
+   GOOGLE_OAUTH_SCOPES="openid email profile https://www.googleapis.com/auth/calendar"
+
+   MS_CLIENT_ID=
+   MS_CLIENT_SECRET=
+   MS_TENANT_ID=common
+   MS_REDIRECT_URI=http://localhost:3001/auth/microsoft/callback
+   MS_OAUTH_SCOPES="openid email profile offline_access Calendars.ReadWrite"
+   ```
+   Use the provider credential guide to generate client IDs/secrets, then export the same values in your deployment environment (Docker, CI/CD, etc.).
 4. **Compose stack:** Infrastructure scaffolding is planned at `infra/docker-compose.yml`. Until committed, track progress via `docs/prd/next-steps.md`.
 5. **CI pipeline:** A GitHub Actions workflow (`.github/workflows/build-and-release.yml`) will enforce lint/test/build once scaffolded.
 

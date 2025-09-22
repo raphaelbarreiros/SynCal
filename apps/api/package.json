@@ -18,6 +18,7 @@
     "@fastify/session": "^11.1.0",
     "@prisma/client": "^6.16.2",
     "@syncal/config": "file:../../packages/config",
+    "@syncal/connectors": "file:../../packages/connectors",
     "@syncal/core": "file:../../packages/core",
     "argon2": "^0.41.1",
     "fastify-plugin": "^5.0.1",

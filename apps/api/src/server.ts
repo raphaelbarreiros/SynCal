@@ -9,7 +9,10 @@ import { runMigrations } from './lib/migrate.js';
 import { ensureInitialAdmin } from './lib/bootstrap-admin.js';
 import { healthRoutes } from './routes/health.js';
 import { sessionRoutes } from './routes/auth/session.js';
+import { oauthRoutes } from './routes/auth/oauth.js';
 import { jobsScheduleRoutes } from './routes/jobs/schedule.js';
+import connectorsPlugin from './plugins/connectors.js';
+import { connectorRoutes } from './routes/connectors/index.js';
 
 const logger = createLogger({ service: 'api' });
 
@@ -24,9 +27,12 @@ export async function buildServer(env: AppEnv) {
   await app.register(sessionPlugin);
   await app.register(securityPlugin);
   await app.register(authGuardPlugin);
+  await app.register(connectorsPlugin);
   await app.register(healthRoutes);
   await app.register(sessionRoutes);
+  await app.register(oauthRoutes);
   await app.register(jobsScheduleRoutes);
+  await app.register(connectorRoutes);
 
   return app;
 }

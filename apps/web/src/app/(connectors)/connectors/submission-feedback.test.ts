@@ -1,0 +1,61 @@
+import { describe, expect, it } from 'vitest';
+import type { ConnectorResponse } from '@syncal/core';
+
+import { deriveConnectorSubmissionFeedback } from './submission-feedback.js';
+
+function buildConnector(overrides: Partial<ConnectorResponse> = {}): ConnectorResponse {
+  return {
+    id: '11111111-1111-4111-8111-111111111111',
+    type: 'google',
+    displayName: null,
+    status: 'pending_validation',
+    lastValidatedAt: null,
+    calendars: [],
+    config: undefined,
+    createdAt: '2025-01-01T00:00:00.000Z',
+    updatedAt: '2025-01-01T00:00:00.000Z',
+    ...overrides
+  } satisfies ConnectorResponse;
+}
+
+describe('deriveConnectorSubmissionFeedback', () => {
+  it('returns a success message when validation completes', () => {
+    const connector = buildConnector({
+      displayName: 'Marketing',
+      status: 'validated',
+      config: {
+        provider: 'google',
+        validation: {
+          status: 'success',
+          checkedAt: '2025-01-01T01:00:00.000Z'
+        }
+      }
+    });
+
+    const result = deriveConnectorSubmissionFeedback(connector);
+
+    expect(result.successMessage).toBe('Connector Marketing is ready.');
+    expect(result.errorMessage).toBeUndefined();
+  });
+
+  it('surfaces a validation error with actionable guidance', () => {
+    const connector = buildConnector({
+      status: 'pending_validation',
+      config: {
+        provider: 'google',
+        validation: {
+          status: 'error',
+          checkedAt: '2025-01-01T01:00:00.000Z',
+          error: 'Calendar fetch failed'
+        }
+      }
+    });
+
+    const result = deriveConnectorSubmissionFeedback(connector);
+
+    expect(result.successMessage).toBeUndefined();
+    expect(result.errorMessage).toBe(
+      'Validation failed: Calendar fetch failed. Check OAuth credentials, ensure the selected calendars remain accessible, and retry validation from the connectors table.'
+    );
+  });
+});

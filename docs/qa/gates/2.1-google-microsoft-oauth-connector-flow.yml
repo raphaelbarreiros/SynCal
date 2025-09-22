@@ -1,0 +1,44 @@
+schema: 1
+story: '2.1'
+story_title: 'Google & Microsoft OAuth Connector Flow'
+gate: PASS
+status_reason: 'Validation feedback now surfaces in the portal and OAuth credential guards prevent misconfigured authorization flows; no blocking issues remain.'
+reviewer: 'Quinn (Test Architect)'
+updated: '2025-09-22T22:16:44Z'
+
+top_issues: []
+
+waiver:
+  active: false
+
+quality_score: 100
+expires: '2025-10-06T22:16:44Z'
+
+evidence:
+  tests_reviewed: 17
+  risks_identified: 0
+  trace:
+    ac_covered: [1, 2, 3, 4]
+    ac_gaps: []
+
+nfr_validation:
+  security:
+    status: PASS
+    notes: 'Credential checks fail fast before emitting OAuth URLs; secrets remain encrypted via shared helper.'
+  performance:
+    status: PASS
+    notes: 'Validation sampling plus queued follow-up jobs match documented throughput expectations.'
+  reliability:
+    status: PASS
+    notes: 'Wizard now surfaces validation outcomes so admins can act on connector health regressions.'
+  maintainability:
+    status: PASS
+    notes: 'Structure adheres to architecture guidance; minor optional test addition noted.'
+
+recommendations:
+  immediate: []
+  future:
+    - action: 'Add a Playwright flow covering the validation-error banner to lock the regression.'
+      refs:
+        - apps/web/tests/e2e/connectors.spec.ts
+      suggested_owner: dev

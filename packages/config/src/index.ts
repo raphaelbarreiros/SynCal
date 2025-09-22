@@ -2,6 +2,7 @@ import fastifyEnv from '@fastify/env';
 import type { FastifyInstance } from 'fastify';
 import dotenvFlow from 'dotenv-flow';
 import { z } from 'zod';
+import { clearCachedKey } from './secrets.js';
 
 type NodeEnv = 'development' | 'test' | 'production';
 
@@ -9,6 +10,16 @@ const DEFAULT_LOGIN_RATE_LIMIT =
   (process.env.NODE_ENV as NodeEnv | undefined) === 'production' ? 5 : 25;
 
 const FASTIFY_CONF_KEY = 'config' as const;
+
+const optionalNonEmpty = (message: string) =>
+  z.preprocess(
+    (value) =>
+      typeof value === 'string' && value.trim().length === 0 ? undefined : value,
+    z
+      .string()
+      .min(1, message)
+      .optional()
+  );
 
 const zEnvSchema = z.object({
   NODE_ENV: z
@@ -24,6 +35,36 @@ const zEnvSchema = z.object({
   ENCRYPTION_KEY: z
     .string()
     .min(32, 'ENCRYPTION_KEY must be at least 32 characters'),
+  APP_BASE_URL: z
+    .string()
+    .url('APP_BASE_URL must be a valid URL')
+    .default('http://localhost:3000'),
+  API_BASE_URL: z
+    .string()
+    .url('API_BASE_URL must be a valid URL')
+    .default('http://localhost:3001'),
+  GOOGLE_CLIENT_ID: optionalNonEmpty('GOOGLE_CLIENT_ID is required'),
+  GOOGLE_CLIENT_SECRET: optionalNonEmpty('GOOGLE_CLIENT_SECRET is required'),
+  GOOGLE_REDIRECT_URI: z
+    .string()
+    .url('GOOGLE_REDIRECT_URI must be a valid URL'),
+  GOOGLE_OAUTH_SCOPES: z
+    .string()
+    .min(1, 'GOOGLE_OAUTH_SCOPES is required')
+    .default('openid email profile https://www.googleapis.com/auth/calendar'),
+  MS_CLIENT_ID: optionalNonEmpty('MS_CLIENT_ID is required'),
+  MS_CLIENT_SECRET: optionalNonEmpty('MS_CLIENT_SECRET is required'),
+  MS_TENANT_ID: z
+    .string()
+    .min(1, 'MS_TENANT_ID is required')
+    .default('common'),
+  MS_REDIRECT_URI: z
+    .string()
+    .url('MS_REDIRECT_URI must be a valid URL'),
+  MS_OAUTH_SCOPES: z
+    .string()
+    .min(1, 'MS_OAUTH_SCOPES is required')
+    .default('openid email profile offline_access Calendars.ReadWrite'),
   CORS_ALLOWED_ORIGIN: z
     .string()
     .optional(),
@@ -70,6 +111,44 @@ const fastifyEnvSchema = {
     ENCRYPTION_KEY: {
       type: 'string',
       minLength: 32
+    },
+    APP_BASE_URL: {
+      type: 'string',
+      default: 'http://localhost:3000'
+    },
+    API_BASE_URL: {
+      type: 'string',
+      default: 'http://localhost:3001'
+    },
+    GOOGLE_CLIENT_ID: {
+      type: 'string'
+    },
+    GOOGLE_CLIENT_SECRET: {
+      type: 'string'
+    },
+    GOOGLE_REDIRECT_URI: {
+      type: 'string'
+    },
+    GOOGLE_OAUTH_SCOPES: {
+      type: 'string',
+      default: 'openid email profile https://www.googleapis.com/auth/calendar'
+    },
+    MS_CLIENT_ID: {
+      type: 'string'
+    },
+    MS_CLIENT_SECRET: {
+      type: 'string'
+    },
+    MS_TENANT_ID: {
+      type: 'string',
+      default: 'common'
+    },
+    MS_REDIRECT_URI: {
+      type: 'string'
+    },
+    MS_OAUTH_SCOPES: {
+      type: 'string',
+      default: 'openid email profile offline_access Calendars.ReadWrite'
     },
     CORS_ALLOWED_ORIGIN: {
       type: 'string'
@@ -154,9 +233,11 @@ export async function registerConfig(fastify: FastifyInstance): Promise<AppEnv> 
 
 export function clearCachedEnv(): void {
   cachedEnv = null;
+  clearCachedKey();
 }
 
 export { getLogger, createLogger, type AppLogger } from './logging.js';
+export * from './secrets.js';
 
 declare module 'fastify' {
   interface FastifyInstance {
