@@ -18,7 +18,7 @@ These guidelines define what reviewers and authors must check before merging cha
 - Sessions/auth guards applied to protected routes.
 - Rate limiting and security headers configured where appropriate.
 - No secrets or tokens logged; sensitive fields redacted.
-- Crypto uses `ENCRYPTION_KEY` (base64 via `packages/config/src/index.ts` helper); secrets only decrypted in-memory.
+- Crypto uses `ENCRYPTION_KEY` (base64 via `packages/config/src/index.ts` helper; see `.env.example` and `docs/architecture/local-development.md#1-environment-setup` for expected format); secrets only decrypted in-memory.
 
 ### Data & Migrations
 - Prisma schema diffs reviewed; new fields, indexes, and enums documented.
