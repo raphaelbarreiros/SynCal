@@ -83,8 +83,13 @@ interface MicrosoftCredentials {
 }
 
 function requireGoogleCredentials(env: AppEnv): GoogleCredentials {
-  if (!env.GOOGLE_CLIENT_ID || !env.GOOGLE_CLIENT_SECRET) {
-    throw new Error('Google OAuth is not configured. Set GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET.');
+  const missing: string[] = [];
+  if (!env.GOOGLE_CLIENT_ID) missing.push('GOOGLE_CLIENT_ID');
+  if (!env.GOOGLE_CLIENT_SECRET) missing.push('GOOGLE_CLIENT_SECRET');
+  if (!env.GOOGLE_REDIRECT_URI) missing.push('GOOGLE_REDIRECT_URI');
+
+  if (missing.length > 0) {
+    throw new Error(`Google OAuth is not configured. Set ${missing.join(', ')}.`);
   }
 
   return {
@@ -95,8 +100,14 @@ function requireGoogleCredentials(env: AppEnv): GoogleCredentials {
 }
 
 function requireMicrosoftCredentials(env: AppEnv): MicrosoftCredentials {
-  if (!env.MS_CLIENT_ID || !env.MS_CLIENT_SECRET) {
-    throw new Error('Microsoft OAuth is not configured. Set MS_CLIENT_ID and MS_CLIENT_SECRET.');
+  const missing: string[] = [];
+  if (!env.MS_CLIENT_ID) missing.push('MS_CLIENT_ID');
+  if (!env.MS_CLIENT_SECRET) missing.push('MS_CLIENT_SECRET');
+  if (!env.MS_REDIRECT_URI) missing.push('MS_REDIRECT_URI');
+  if (!env.MS_TENANT_ID) missing.push('MS_TENANT_ID');
+
+  if (missing.length > 0) {
+    throw new Error(`Microsoft OAuth is not configured. Set ${missing.join(', ')}.`);
   }
 
   return {

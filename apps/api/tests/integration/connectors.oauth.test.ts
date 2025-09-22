@@ -240,6 +240,51 @@ describe('Connector OAuth flows', () => {
     }
   });
 
+  it('requires Google redirect URIs before starting OAuth', () => {
+    const context = createContext();
+    const { session, env, registry, repos, prisma } = context;
+
+    env.GOOGLE_REDIRECT_URI = '' as unknown as string;
+
+    expect(() =>
+      startOAuthFlow(
+        session,
+        { provider: 'google' },
+        {
+          env,
+          connectorRegistry: registry,
+          connectors: repos.connectors,
+          calendars: repos.calendars,
+          auditLogs: repos.auditLogs,
+          prisma
+        }
+      )
+    ).toThrow('Google OAuth is not configured. Set GOOGLE_REDIRECT_URI.');
+  });
+
+  it('requires Microsoft redirect URI and tenant before starting OAuth', () => {
+    const context = createContext();
+    const { session, env, registry, repos, prisma } = context;
+
+    env.MS_REDIRECT_URI = '' as unknown as string;
+    env.MS_TENANT_ID = '' as unknown as string;
+
+    expect(() =>
+      startOAuthFlow(
+        session,
+        { provider: 'microsoft' },
+        {
+          env,
+          connectorRegistry: registry,
+          connectors: repos.connectors,
+          calendars: repos.calendars,
+          auditLogs: repos.auditLogs,
+          prisma
+        }
+      )
+    ).toThrow('Microsoft OAuth is not configured. Set MS_REDIRECT_URI, MS_TENANT_ID.');
+  });
+
   it('completes connector creation and queues validation job', async () => {
     const context = createContext();
     vi.setSystemTime(context.now);

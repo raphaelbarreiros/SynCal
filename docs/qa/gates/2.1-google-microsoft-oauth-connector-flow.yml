@@ -1,0 +1,58 @@
+schema: 1
+story: '2.1'
+story_title: 'Google & Microsoft OAuth Connector Flow'
+gate: CONCERNS
+status_reason: 'Portal currently shows a success banner even when post-setup validation fails, so admins lose visibility into OAuth errors.'
+reviewer: 'Quinn (Test Architect)'
+updated: '2025-09-22T19:51:27Z'
+
+top_issues:
+  - severity: high
+    finding: 'Connector wizard always surfaces a success message after createConnector—even when validation returns an error—so AC4 feedback is missing.'
+    refs:
+      - apps/web/src/app/(connectors)/connectors/page.tsx:380
+    suggested_owner: dev
+  - severity: medium
+    finding: 'OAuth credential helpers skip redirect URI/tenant validation, leading to malformed provider URLs when env vars are absent.'
+    refs:
+      - apps/api/src/services/connectors.ts:119
+    suggested_owner: dev
+
+waiver:
+  active: false
+
+quality_score: 80
+expires: '2025-10-06T19:51:27Z'
+
+evidence:
+  tests_reviewed: 16
+  risks_identified: 2
+  trace:
+    ac_covered: [1, 2, 3]
+    ac_gaps: [4]
+
+nfr_validation:
+  security:
+    status: CONCERNS
+    notes: 'Require redirect URI / tenant guards before emitting authorization URLs to avoid leaking misconfigurations.'
+  performance:
+    status: PASS
+    notes: 'Validation sampling and job scheduling stay within expected bounds.'
+  reliability:
+    status: CONCERNS
+    notes: 'Admins receive false-positive success feedback when validation fails, blocking timely remediation.'
+  maintainability:
+    status: PASS
+    notes: 'Code structure and typing remain clean; addressing above items keeps debt low.'
+
+recommendations:
+  immediate:
+    - action: 'Display validation error feedback and actionable retry guidance when createConnector returns pending_validation.'
+      refs:
+        - apps/web/src/app/(connectors)/connectors/page.tsx:295
+      suggested_owner: dev
+    - action: 'Assert required OAuth env vars (redirect URIs, tenant) before constructing provider URLs; fail fast with descriptive errors.'
+      refs:
+        - apps/api/src/services/connectors.ts:72
+      suggested_owner: dev
+  future: []

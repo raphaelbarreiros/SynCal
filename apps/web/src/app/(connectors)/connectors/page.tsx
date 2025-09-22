@@ -2,62 +2,18 @@
 
 import { Suspense, useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import type {
+  ConnectorResponse,
+  OAuthContextEntry,
+  OAuthProvider,
+  PrivacyMode
+} from '@syncal/core';
+
+import { deriveConnectorSubmissionFeedback } from './submission-feedback';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:3001';
 
-type OAuthProvider = 'google' | 'microsoft';
-
-type PrivacyMode = 'original_title' | 'busy_placeholder';
-
-type ConnectorStatus = 'pending_validation' | 'validated' | 'disabled';
-
-type ValidationStatus = 'pending' | 'success' | 'error';
-
-type ConnectorCalendar = {
-  id: string;
-  providerCalendarId: string;
-  displayName: string | null;
-  privacyMode: PrivacyMode;
-};
-
-type Connector = {
-  id: string;
-  type: OAuthProvider;
-  displayName: string | null;
-  status: ConnectorStatus;
-  lastValidatedAt: string | null;
-  calendars: ConnectorCalendar[];
-  config?: {
-    validation?: {
-      status: ValidationStatus;
-      checkedAt?: string;
-      samples?: Array<{ calendarId: string; total: number; from: string; to: string }>;
-      error?: string;
-    };
-  };
-  createdAt: string;
-};
-
-type DiscoveredCalendar = {
-  id: string;
-  name: string;
-  description?: string;
-  timeZone?: string;
-  isPrimary: boolean;
-  canEdit: boolean;
-};
-
-type OAuthContextEntry = {
-  provider: OAuthProvider;
-  state: string;
-  profile?: {
-    id: string;
-    email?: string;
-    name?: string;
-  };
-  scopes?: string[];
-  discoveredCalendars: DiscoveredCalendar[];
-};
+export type Connector = ConnectorResponse;
 
 type ProviderDefinition = {
   id: OAuthProvider;
@@ -377,9 +333,19 @@ function ConnectorsContent() {
       }
 
       const created = (await response.json()) as Connector;
-      setActionMessage(`Connector ${created.displayName ?? created.type} is ready.`);
       await loadConnectors();
       await loadContext();
+
+      const { successMessage, errorMessage } = deriveConnectorSubmissionFeedback(created);
+
+      if (errorMessage) {
+        setActionMessage(null);
+        setPageError(errorMessage);
+        return;
+      }
+
+      setPageError(null);
+      setActionMessage(successMessage ?? null);
       setDisplayName('');
       setSelectionState({});
       router.replace('/connectors');
