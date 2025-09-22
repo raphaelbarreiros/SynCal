@@ -10,4 +10,5 @@ export interface HealthResponse {
 
 export * from './dtos/auth.js';
 export * from './dtos/jobs.js';
+export * from './dtos/connectors.js';
 export * from './utils/backoff.js';

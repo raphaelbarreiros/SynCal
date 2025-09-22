@@ -43,7 +43,17 @@ const zEnvSchema = z.object({
     .number()
     .int()
     .positive()
-    .default(DEFAULT_LOGIN_RATE_LIMIT)
+    .default(DEFAULT_LOGIN_RATE_LIMIT),
+  // OAuth Provider Configurations
+  GOOGLE_CLIENT_ID: z.string().optional(),
+  GOOGLE_CLIENT_SECRET: z.string().optional(),
+  GOOGLE_REDIRECT_URI: z.string().optional(),
+  GOOGLE_OAUTH_SCOPES: z.string().optional(),
+  MS_CLIENT_ID: z.string().optional(),
+  MS_CLIENT_SECRET: z.string().optional(),
+  MS_TENANT_ID: z.string().optional(),
+  MS_REDIRECT_URI: z.string().optional(),
+  MS_OAUTH_SCOPES: z.string().optional()
 });
 
 export type AppEnv = z.infer<typeof zEnvSchema>;
@@ -92,6 +102,34 @@ const fastifyEnvSchema = {
     AUTH_SESSION_RATE_LIMIT_MAX: {
       type: 'integer',
       default: DEFAULT_LOGIN_RATE_LIMIT
+    },
+    // OAuth Provider Configurations
+    GOOGLE_CLIENT_ID: {
+      type: 'string'
+    },
+    GOOGLE_CLIENT_SECRET: {
+      type: 'string'
+    },
+    GOOGLE_REDIRECT_URI: {
+      type: 'string'
+    },
+    GOOGLE_OAUTH_SCOPES: {
+      type: 'string'
+    },
+    MS_CLIENT_ID: {
+      type: 'string'
+    },
+    MS_CLIENT_SECRET: {
+      type: 'string'
+    },
+    MS_TENANT_ID: {
+      type: 'string'
+    },
+    MS_REDIRECT_URI: {
+      type: 'string'
+    },
+    MS_OAUTH_SCOPES: {
+      type: 'string'
     }
   }
 } as const;
