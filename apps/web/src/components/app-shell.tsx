@@ -11,6 +11,36 @@ import {
   type ReactNode,
   type SyntheticEvent
 } from 'react';
+
+function useMediaQuery(query: string): boolean {
+  const [matches, setMatches] = useState<boolean>(() => {
+    if (typeof window === 'undefined') {
+      return true;
+    }
+
+    return window.matchMedia(query).matches;
+  });
+
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return;
+    }
+
+    const mediaQuery = window.matchMedia(query);
+    const handleChange = (event: MediaQueryListEvent) => {
+      setMatches(event.matches);
+    };
+
+    setMatches(mediaQuery.matches);
+    mediaQuery.addEventListener('change', handleChange);
+
+    return () => {
+      mediaQuery.removeEventListener('change', handleChange);
+    };
+  }, [query]);
+
+  return matches;
+}
 import LogoutButton from './logout-button';
 import { ThemeToggle } from '@syncal/ui';
 
@@ -185,9 +215,21 @@ function MobileNavigation({ isOpen, onClose, items, currentPath }: MobileNavProp
   );
 }
 
-function DesktopSidebar({ items, currentPath }: { items: NavItem[]; currentPath: string }) {
+function DesktopSidebar({
+  items,
+  currentPath,
+  hidden
+}: {
+  items: NavItem[];
+  currentPath: string;
+  hidden: boolean;
+}) {
+  if (hidden) {
+    return null;
+  }
+
   return (
-    <aside className="hidden w-72 flex-col border-r border-slate-200 bg-white/80 backdrop-blur-md dark:border-slate-800 dark:bg-slate-900/70 lg:flex">
+    <aside className="flex w-72 flex-col border-r border-slate-200 bg-white/80 backdrop-blur-md transition-opacity duration-200 dark:border-slate-800 dark:bg-slate-900/70">
       <div className="flex h-16 items-center border-b border-slate-200 px-6 dark:border-slate-800">
         <div>
           <p className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">SynCal</p>
@@ -212,35 +254,45 @@ function DesktopSidebar({ items, currentPath }: { items: NavItem[]; currentPath:
   );
 }
 
-function Header({ onOpenMobile, isMobileNavOpen }: { onOpenMobile: () => void; isMobileNavOpen: boolean }) {
+function Header({
+  onOpenMobile,
+  isMobileNavOpen,
+  showMobileTrigger
+}: {
+  onOpenMobile: () => void;
+  isMobileNavOpen: boolean;
+  showMobileTrigger: boolean;
+}) {
   return (
     <header className="sticky top-0 z-20 border-b border-slate-200 bg-white/80 backdrop-blur-md transition dark:border-slate-800 dark:bg-slate-900/70">
       <div className="flex items-center justify-between gap-4 px-4 py-3 sm:px-6 lg:px-8">
         <div className="flex items-center gap-3">
-          <button
-            type="button"
-            onClick={onOpenMobile}
-          className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-slate-300 bg-white text-slate-700 shadow-sm transition hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800 lg:hidden"
-            aria-label="Open navigation"
-            aria-expanded={isMobileNavOpen}
-            aria-controls="mobile-navigation"
-          >
-            <span aria-hidden="true" className="block h-5 w-5">
-              <span className="sr-only">Menu</span>
-              <svg
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="1.5"
-                strokeLinecap="round"
-                className="h-5 w-5"
-              >
-                <path d="M4 7h16" />
-                <path d="M4 12h16" />
-                <path d="M4 17h16" />
-              </svg>
-            </span>
-          </button>
+          {showMobileTrigger ? (
+            <button
+              type="button"
+              onClick={onOpenMobile}
+              className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-slate-300 bg-white text-slate-700 shadow-sm transition hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800"
+              aria-label="Open navigation"
+              aria-expanded={isMobileNavOpen}
+              aria-controls="mobile-navigation"
+            >
+              <span aria-hidden="true" className="block h-5 w-5">
+                <span className="sr-only">Menu</span>
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                  strokeLinecap="round"
+                  className="h-5 w-5"
+                >
+                  <path d="M4 7h16" />
+                  <path d="M4 12h16" />
+                  <path d="M4 17h16" />
+                </svg>
+              </span>
+            </button>
+          ) : null}
           <div>
             <p className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">SynCal</p>
             <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">Portal Shell</h2>
@@ -261,6 +313,9 @@ function Header({ onOpenMobile, isMobileNavOpen }: { onOpenMobile: () => void; i
 export function AppShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
+  const isLargeViewport = useMediaQuery('(min-width: 1024px)');
+
+  const isAuthRoute = pathname?.startsWith('/login') ?? false;
 
   const openMobileNav = useCallback(() => {
     setIsMobileNavOpen(true);
@@ -276,15 +331,27 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   const navItems = useMemo(() => NAV_ITEMS, []);
 
+  if (isAuthRoute) {
+    return <>{children}</>;
+  }
+
   return (
     <>
       <a href="#main-content" className="skip-link">
         Skip to main content
       </a>
       <div className="flex min-h-screen bg-slate-100 text-slate-900 transition-colors duration-300 dark:bg-slate-950 dark:text-slate-100">
-        <DesktopSidebar items={navItems} currentPath={pathname ?? '/'} />
+        <DesktopSidebar
+          items={navItems}
+          currentPath={pathname ?? '/'}
+          hidden={!isLargeViewport}
+        />
         <div className="flex flex-1 flex-col">
-          <Header onOpenMobile={openMobileNav} isMobileNavOpen={isMobileNavOpen} />
+          <Header
+            onOpenMobile={openMobileNav}
+            isMobileNavOpen={isMobileNavOpen}
+            showMobileTrigger={!isLargeViewport}
+          />
           <main
             id="main-content"
             className="flex-1 px-4 py-6 sm:px-6 lg:px-10"

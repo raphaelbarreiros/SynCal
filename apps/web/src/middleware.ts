@@ -3,8 +3,17 @@ import type { NextRequest } from 'next/server';
 
 const LOGIN_PATH = '/login';
 const SESSION_COOKIE = 'syn_session';
-const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_BASE_URL ?? process.env.API_BASE_URL ?? 'http://api:3001';
+
+function getApiBaseUrls(): string[] {
+  const configuredUrls = [
+    process.env.API_BASE_URL,
+    process.env.INTERNAL_API_BASE_URL,
+    process.env.NEXT_PUBLIC_API_BASE_URL,
+    'http://api:3001'
+  ].filter((value): value is string => Boolean(value));
+
+  return Array.from(new Set(configuredUrls));
+}
 
 function shouldBypassAuth(pathname: string): boolean {
   return (
@@ -40,21 +49,32 @@ async function hasValidSession(request: NextRequest): Promise<boolean> {
     return false;
   }
 
-  try {
-    const response = await fetch(`${API_BASE_URL}/auth/session`, {
-      method: 'GET',
-      headers: {
-        cookie: cookieHeader,
-        accept: 'application/json'
-      },
-      cache: 'no-store'
-    });
+  let lastNetworkError: unknown = null;
 
-    return response.ok;
-  } catch (error) {
-    console.error('Failed to validate admin session', error);
-    return false;
+  for (const baseUrl of getApiBaseUrls()) {
+    try {
+      const response = await fetch(`${baseUrl}/auth/session`, {
+        method: 'GET',
+        headers: {
+          cookie: cookieHeader,
+          accept: 'application/json'
+        },
+        cache: 'no-store'
+      });
+
+      return response.ok;
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : typeof error === 'string' ? error : 'Unknown network error';
+      lastNetworkError = new Error(`Failed to reach admin session endpoint at ${baseUrl}: ${message}`);
+    }
   }
+
+  if (lastNetworkError) {
+    console.error('Failed to validate admin session', lastNetworkError);
+  }
+
+  return false;
 }
 
 export default async function middleware(request: NextRequest) {

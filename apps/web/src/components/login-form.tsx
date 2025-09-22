@@ -39,12 +39,14 @@ export default function LoginForm() {
       setIsLoadingToken(true);
       const token = await requestCsrfToken();
       setCsrfToken(token);
+      return token;
     } catch (error) {
       setStatusMessage({
         type: 'error',
         message: 'Unable to prepare the login form. Please refresh and try again.'
       });
       setCsrfToken(null);
+      return null;
     } finally {
       setIsLoadingToken(false);
     }
@@ -58,7 +60,13 @@ export default function LoginForm() {
     async (event: FormEvent<HTMLFormElement>) => {
       event.preventDefault();
 
-      if (!csrfToken) {
+      let token = csrfToken;
+
+      if (!token) {
+        token = await loadCsrfToken();
+      }
+
+      if (!token) {
         setStatusMessage({
           type: 'error',
           message: 'Security token missing. Please refresh the page and try again.'
@@ -85,15 +93,22 @@ export default function LoginForm() {
           credentials: 'include',
           headers: {
             'Content-Type': 'application/json',
-            'X-CSRF-Token': csrfToken
+            'X-CSRF-Token': token
           },
           body: JSON.stringify({ email: normalizedEmail, password })
         });
 
         if (response.status === 204) {
-          const redirectTo = searchParams.get('from') ?? '/';
-          router.replace(redirectTo);
-          router.refresh();
+          const requestedRedirect = searchParams.get('from');
+          const redirectTo = requestedRedirect && requestedRedirect.startsWith('/') ? requestedRedirect : '/';
+          try {
+            router.replace(redirectTo);
+            router.refresh();
+          } catch (error) {
+            if (typeof window !== 'undefined') {
+              window.location.href = redirectTo;
+            }
+          }
           return;
         }
 

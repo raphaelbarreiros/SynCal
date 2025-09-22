@@ -1,0 +1,71 @@
+schema: 1
+story: '1.3'
+story_title: 'Portal Shell & Navigation'
+gate: FAIL
+status_reason: 'Sidebar still expands at 768px and dashboard tiles bypass the required ShadCN components, leaving AC1 and AC4 unmet.'
+reviewer: 'Quinn (Test Architect)'
+updated: '2025-09-20T15:22:39Z'
+
+top_issues:
+  - severity: high
+    finding: 'Desktop sidebar remains visible at the 768px breakpoint and the mobile trigger is hidden, so the responsive collapse requirement fails.'
+    refs:
+      - apps/web/src/components/app-shell.tsx:190
+      - apps/web/src/components/app-shell.tsx:223
+    suggested_owner: dev
+  - severity: high
+    finding: 'Dashboard status tiles are custom markup instead of ShadCN primitives, violating AC1''s requirement to use the shared component library.'
+    refs:
+      - packages/ui/src/dashboard/status-card.tsx:1
+    suggested_owner: dev
+  - severity: medium
+    finding: 'Planned unit/integration coverage and dark-theme/unified calendar assertions were not implemented, leaving key scenarios untested.'
+    refs:
+      - docs/qa/assessments/1.3-test-design-20250919.md
+      - apps/web/tests/e2e/dashboard.spec.ts:23
+      - apps/web/tests/e2e/dashboard.spec.ts:40
+    suggested_owner: dev
+
+waiver:
+  active: false
+
+quality_score: 60
+expires: '2025-10-04T15:22:43Z'
+
+evidence:
+  tests_reviewed: 5
+  risks_identified: 3
+  trace:
+    ac_covered: [2, 3]
+    ac_gaps: [1, 4]
+
+nfr_validation:
+  security:
+    status: PASS
+    notes: 'Middleware continues to guard the portal and logout maintains CSRF protection.'
+  performance:
+    status: PASS
+    notes: 'Static shell scaffolding only; no new performance hotspots observed.'
+  reliability:
+    status: PASS
+    notes: 'Auth flows and routing stubs behave as expected aside from the responsive defect.'
+  maintainability:
+    status: CONCERNS
+    notes: 'Missing planned automated coverage increases regression risk and deviates from QA strategy.'
+
+recommendations:
+  immediate:
+    - action: 'Collapse the sidebar at <=768px and expose the mobile sheet trigger with an E2E assertion at 768px.'
+      refs:
+        - apps/web/src/components/app-shell.tsx:190
+        - apps/web/tests/e2e/dashboard.spec.ts:40
+      suggested_owner: dev
+    - action: 'Refactor dashboard tiles to wrap ShadCN Card primitives (or generate via shadcn CLI) so AC1 is satisfied.'
+      refs:
+        - packages/ui/src/dashboard/status-card.tsx:1
+      suggested_owner: dev
+  future:
+    - action: 'Implement the planned unit/integration suites and extend Playwright coverage for the unified calendar empty state and theme toggle.'
+      refs:
+        - docs/qa/assessments/1.3-test-design-20250919.md
+      suggested_owner: dev

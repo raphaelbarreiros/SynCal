@@ -5,6 +5,9 @@ import { z } from 'zod';
 
 type NodeEnv = 'development' | 'test' | 'production';
 
+const DEFAULT_LOGIN_RATE_LIMIT =
+  (process.env.NODE_ENV as NodeEnv | undefined) === 'production' ? 5 : 25;
+
 const FASTIFY_CONF_KEY = 'config' as const;
 
 const zEnvSchema = z.object({
@@ -21,6 +24,9 @@ const zEnvSchema = z.object({
   ENCRYPTION_KEY: z
     .string()
     .min(32, 'ENCRYPTION_KEY must be at least 32 characters'),
+  CORS_ALLOWED_ORIGIN: z
+    .string()
+    .optional(),
   INITIAL_ADMIN_EMAIL: z
     .string()
     .email('INITIAL_ADMIN_EMAIL must be a valid email address')
@@ -32,7 +38,12 @@ const zEnvSchema = z.object({
   LOG_LEVEL: z
     .string()
     .default('info'),
-  WORKER_HEARTBEAT_INTERVAL_MS: z.coerce.number().int().positive().default(5000)
+  WORKER_HEARTBEAT_INTERVAL_MS: z.coerce.number().int().positive().default(5000),
+  AUTH_SESSION_RATE_LIMIT_MAX: z.coerce
+    .number()
+    .int()
+    .positive()
+    .default(DEFAULT_LOGIN_RATE_LIMIT)
 });
 
 export type AppEnv = z.infer<typeof zEnvSchema>;
@@ -60,6 +71,9 @@ const fastifyEnvSchema = {
       type: 'string',
       minLength: 32
     },
+    CORS_ALLOWED_ORIGIN: {
+      type: 'string'
+    },
     INITIAL_ADMIN_EMAIL: {
       type: 'string'
     },
@@ -74,6 +88,10 @@ const fastifyEnvSchema = {
     WORKER_HEARTBEAT_INTERVAL_MS: {
       type: 'integer',
       default: 5000
+    },
+    AUTH_SESSION_RATE_LIMIT_MAX: {
+      type: 'integer',
+      default: DEFAULT_LOGIN_RATE_LIMIT
     }
   }
 } as const;

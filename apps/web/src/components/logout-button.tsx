@@ -70,6 +70,11 @@ export default function LogoutButton({
       });
 
       if (response.status === 204) {
+        if (typeof window !== 'undefined') {
+          window.location.assign('/login');
+          return;
+        }
+
         router.replace('/login');
         router.refresh();
         return;
@@ -104,9 +109,11 @@ export default function LogoutButton({
         type="button"
         onClick={handleSignOut}
         disabled={isLoading}
+        aria-busy={isLoading}
+        data-state={isLoading ? 'loading' : 'idle'}
         className={`${baseButtonClasses} ${variantButtonClasses}`}
       >
-        {isLoading ? 'Signing out…' : label}
+        {label}
       </button>
     </div>
   );
