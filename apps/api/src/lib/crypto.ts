@@ -1,4 +1,4 @@
-import { createCipher, createDecipher, randomBytes, createHash } from 'crypto';
+import { createCipheriv, createDecipheriv, randomBytes, createHash } from 'crypto';
 
 /**
  * Encrypts sensitive data like OAuth tokens using AES-256-GCM
@@ -8,7 +8,7 @@ export function encryptCredentials(data: Record<string, any>, encryptionKey: str
     const json = JSON.stringify(data);
     const key = getEncryptionKey(encryptionKey);
     const iv = randomBytes(16); // 128-bit IV for GCM
-    const cipher = createCipher('aes-256-gcm', key);
+    const cipher = createCipheriv('aes-256-gcm', key, iv);
     
     let encrypted = cipher.update(json, 'utf8', 'hex');
     encrypted += cipher.final('hex');
@@ -41,7 +41,7 @@ export function decryptCredentials(encryptedData: Buffer, encryptionKey: string)
     const tag = encryptedData.slice(16, 32);
     const encrypted = encryptedData.slice(32);
     
-    const decipher = createDecipher('aes-256-gcm', key);
+    const decipher = createDecipheriv('aes-256-gcm', key, iv);
     decipher.setAuthTag(tag);
     
     let decrypted = decipher.update(encrypted, undefined, 'utf8');
@@ -58,14 +58,16 @@ export function decryptCredentials(encryptedData: Buffer, encryptionKey: string)
  */
 function getEncryptionKey(encryptionKey: string): Buffer {
   // Handle base64: prefix as mentioned in .env.example
-  let keyString = encryptionKey;
-  if (keyString.startsWith('base64:')) {
-    keyString = keyString.slice(7);
-    return Buffer.from(keyString, 'base64');
+  let keyBuffer: Buffer;
+  if (encryptionKey.startsWith('base64:')) {
+    const keyString = encryptionKey.slice(7);
+    keyBuffer = Buffer.from(keyString, 'base64');
+  } else {
+    keyBuffer = Buffer.from(encryptionKey, 'utf8');
   }
   
-  // For non-base64 keys, hash them to ensure consistent 32-byte length
-  return createHash('sha256').update(keyString).digest();
+  // Always hash to ensure consistent 32-byte length for AES-256
+  return createHash('sha256').update(keyBuffer).digest();
 }
 
 /**

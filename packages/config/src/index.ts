@@ -53,7 +53,9 @@ const zEnvSchema = z.object({
   MS_CLIENT_SECRET: z.string().optional(),
   MS_TENANT_ID: z.string().optional(),
   MS_REDIRECT_URI: z.string().optional(),
-  MS_OAUTH_SCOPES: z.string().optional()
+  MS_OAUTH_SCOPES: z.string().optional(),
+  APP_BASE_URL: z.string().optional(),
+  API_BASE_URL: z.string().optional()
 });
 
 export type AppEnv = z.infer<typeof zEnvSchema>;
@@ -129,6 +131,12 @@ const fastifyEnvSchema = {
       type: 'string'
     },
     MS_OAUTH_SCOPES: {
+      type: 'string'
+    },
+    APP_BASE_URL: {
+      type: 'string'
+    },
+    API_BASE_URL: {
       type: 'string'
     }
   }

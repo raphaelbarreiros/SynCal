@@ -14,7 +14,7 @@ export const ConnectorCreateRequestSchema = z.object({
   type: ConnectorTypeSchema,
   displayName: z.string().optional(),
   calendars: z.array(z.string()).min(1, 'At least one calendar must be selected'),
-  config: z.record(z.unknown()).optional()
+  config: z.record(z.string(), z.unknown()).optional()
 });
 
 export const OAuthInitiateRequestSchema = z.object({
@@ -31,7 +31,7 @@ export const CalendarSchema = z.object({
   providerCalendarId: z.string(),
   displayName: z.string().nullable(),
   privacyMode: PrivacyModeSchema,
-  metadata: z.record(z.unknown()),
+  metadata: z.record(z.string(), z.unknown()),
   createdAt: z.date(),
   updatedAt: z.date()
 });
