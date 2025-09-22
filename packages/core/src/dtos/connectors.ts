@@ -1,0 +1,132 @@
+import { z } from 'zod';
+
+export const OAuthProviderSchema = z.enum(['google', 'microsoft']);
+export type OAuthProvider = z.infer<typeof OAuthProviderSchema>;
+
+export const ConnectorStatusSchema = z.enum([
+  'pending_validation',
+  'validated',
+  'disabled'
+]);
+export type ConnectorStatus = z.infer<typeof ConnectorStatusSchema>;
+
+export const PrivacyModeSchema = z.enum(['original_title', 'busy_placeholder']);
+export type PrivacyMode = z.infer<typeof PrivacyModeSchema>;
+
+export const StartOAuthRequestSchema = z.object({
+  provider: OAuthProviderSchema
+});
+export type StartOAuthRequest = z.infer<typeof StartOAuthRequestSchema>;
+
+export const StartOAuthResponseSchema = z.object({
+  provider: OAuthProviderSchema,
+  authorizationUrl: z.string().url(),
+  state: z.string().min(16)
+});
+export type StartOAuthResponse = z.infer<typeof StartOAuthResponseSchema>;
+
+export const DiscoveredCalendarSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  description: z.string().optional(),
+  timeZone: z.string().optional(),
+  isPrimary: z.boolean(),
+  canEdit: z.boolean()
+});
+export type DiscoveredCalendar = z.infer<typeof DiscoveredCalendarSchema>;
+
+export const OAuthContextEntrySchema = z.object({
+  provider: OAuthProviderSchema,
+  state: z.string().min(16),
+  profile: z
+    .object({
+      id: z.string(),
+      email: z.string().optional(),
+      name: z.string().optional()
+    })
+    .optional(),
+  scopes: z.array(z.string()).optional(),
+  discoveredCalendars: z.array(DiscoveredCalendarSchema).default([])
+});
+export type OAuthContextEntry = z.infer<typeof OAuthContextEntrySchema>;
+
+export const OAuthContextResponseSchema = z.object({
+  entries: z.array(OAuthContextEntrySchema)
+});
+export type OAuthContextResponse = z.infer<typeof OAuthContextResponseSchema>;
+
+export const CalendarSelectionSchema = z.object({
+  providerCalendarId: z.string(),
+  displayName: z.string().optional(),
+  privacyMode: PrivacyModeSchema.default('busy_placeholder')
+});
+export type CalendarSelection = z.infer<typeof CalendarSelectionSchema>;
+
+export const CreateConnectorRequestSchema = z.object({
+  type: OAuthProviderSchema,
+  state: z.string().min(16),
+  displayName: z.string().optional(),
+  selectedCalendars: z.array(CalendarSelectionSchema).min(1)
+});
+export type CreateConnectorRequest = z.infer<typeof CreateConnectorRequestSchema>;
+
+export const ConnectorCalendarSchema = z.object({
+  id: z.string().uuid(),
+  providerCalendarId: z.string(),
+  displayName: z.string().nullable(),
+  privacyMode: PrivacyModeSchema,
+  metadata: z.record(z.string(), z.unknown()).optional()
+});
+export type ConnectorCalendar = z.infer<typeof ConnectorCalendarSchema>;
+
+export const ConnectorValidationSampleSchema = z.object({
+  calendarId: z.string(),
+  total: z.number().int().nonnegative(),
+  from: z.string(),
+  to: z.string()
+});
+export type ConnectorValidationSample = z.infer<typeof ConnectorValidationSampleSchema>;
+
+export const ConnectorValidationStateSchema = z.object({
+  status: z.enum(['pending', 'success', 'error']),
+  checkedAt: z.string().optional(),
+  samples: z.array(ConnectorValidationSampleSchema).optional(),
+  error: z.string().optional()
+});
+export type ConnectorValidationState = z.infer<typeof ConnectorValidationStateSchema>;
+
+export const ConnectorConfigSchema = z
+  .object({
+    provider: OAuthProviderSchema,
+    profile: z
+      .object({
+        id: z.string(),
+        email: z.string().optional(),
+        name: z.string().optional()
+      })
+      .optional(),
+    scopes: z.array(z.string()).optional(),
+    discoveredCalendars: z.array(DiscoveredCalendarSchema).optional(),
+    selectedCalendarIds: z.array(z.string()).optional(),
+    validation: ConnectorValidationStateSchema.optional()
+  })
+  .passthrough();
+export type ConnectorConfig = z.infer<typeof ConnectorConfigSchema>;
+
+export const ConnectorResponseSchema = z.object({
+  id: z.string().uuid(),
+  type: OAuthProviderSchema,
+  displayName: z.string().nullable(),
+  status: ConnectorStatusSchema,
+  lastValidatedAt: z.string().nullable().optional(),
+  calendars: z.array(ConnectorCalendarSchema).default([]),
+  config: ConnectorConfigSchema.optional(),
+  createdAt: z.string(),
+  updatedAt: z.string()
+});
+export type ConnectorResponse = z.infer<typeof ConnectorResponseSchema>;
+
+export const ConnectorListResponseSchema = z.object({
+  connectors: z.array(ConnectorResponseSchema)
+});
+export type ConnectorListResponse = z.infer<typeof ConnectorListResponseSchema>;
