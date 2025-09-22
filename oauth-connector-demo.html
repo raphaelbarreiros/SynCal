@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SynCal - OAuth Connector Demo</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        slate: {
+                            50: '#f8fafc',
+                            100: '#f1f5f9',
+                            200: '#e2e8f0',
+                            300: '#cbd5e1',
+                            400: '#94a3b8',
+                            500: '#64748b',
+                            600: '#475569',
+                            700: '#334155',
+                            800: '#1e293b',
+                            900: '#0f172a',
+                            950: '#020617'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="min-h-screen bg-slate-100 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
+    <div class="container mx-auto px-4 py-8 max-w-4xl">
+        <!-- Header -->
+        <header class="space-y-2 mb-8">
+            <h1 class="text-2xl font-semibold text-slate-900 dark:text-slate-100">Connectors</h1>
+            <p class="text-sm text-slate-600 dark:text-slate-300">
+                Manage your calendar connections. Connect Google Workspace, Microsoft 365, and other providers to sync events with SynCal.
+            </p>
+        </header>
+
+        <!-- OAuth Connector Wizard -->
+        <div class="bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800 shadow-sm p-6 mb-8">
+            <h2 class="text-xl font-semibold mb-6">Add New Connector</h2>
+            
+            <div class="space-y-6">
+                <div>
+                    <h3 class="text-lg font-medium mb-2">Choose a Provider</h3>
+                    <p class="text-slate-600 dark:text-slate-300 text-sm mb-4">
+                        Select the calendar provider you want to connect to SynCal.
+                    </p>
+                </div>
+                
+                <div class="grid gap-4 md:grid-cols-2">
+                    <!-- Google Card -->
+                    <div class="cursor-pointer border-2 border-slate-200 dark:border-slate-700 hover:border-blue-200 dark:hover:border-blue-800 rounded-lg p-6 transition-colors bg-white dark:bg-slate-800/50">
+                        <div class="text-center mb-4">
+                            <div class="mx-auto w-12 h-12 bg-red-500 rounded-lg flex items-center justify-center text-white text-xl font-bold mb-3">
+                                G
+                            </div>
+                            <h4 class="text-lg font-semibold">Google Workspace</h4>
+                            <p class="text-slate-600 dark:text-slate-400 text-sm">Connect to Google Calendar</p>
+                        </div>
+                        <ul class="text-sm text-slate-600 dark:text-slate-300 space-y-1">
+                            <li>• Read and write calendar events</li>
+                            <li>• Access to all your Google calendars</li>
+                            <li>• Real-time synchronization</li>
+                        </ul>
+                    </div>
+
+                    <!-- Microsoft Card -->
+                    <div class="cursor-pointer border-2 border-slate-200 dark:border-slate-700 hover:border-blue-200 dark:hover:border-blue-800 rounded-lg p-6 transition-colors bg-white dark:bg-slate-800/50">
+                        <div class="text-center mb-4">
+                            <div class="mx-auto w-12 h-12 bg-blue-500 rounded-lg flex items-center justify-center text-white text-xl font-bold mb-3">
+                                M
+                            </div>
+                            <h4 class="text-lg font-semibold">Microsoft 365</h4>
+                            <p class="text-slate-600 dark:text-slate-400 text-sm">Connect to Outlook Calendar</p>
+                        </div>
+                        <ul class="text-sm text-slate-600 dark:text-slate-300 space-y-1">
+                            <li>• Read and write calendar events</li>
+                            <li>• Access to all your Outlook calendars</li>
+                            <li>• Real-time synchronization</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Calendar Selection Demo -->
+        <div class="bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800 shadow-sm p-6 mb-8">
+            <div class="flex items-center justify-between mb-6">
+                <div>
+                    <h3 class="text-xl font-semibold mb-2">Select Calendars</h3>
+                    <p class="text-slate-600 dark:text-slate-300 text-sm">
+                        Choose which calendars to sync with SynCal.
+                    </p>
+                </div>
+                <button class="px-4 py-2 text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-slate-100 text-sm">
+                    ← Back
+                </button>
+            </div>
+
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium mb-2">
+                        Display Name (optional)
+                    </label>
+                    <input
+                        type="text"
+                        placeholder="Google Connector"
+                        class="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-md bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none"
+                    />
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium mb-2">
+                        Available Calendars (3)
+                    </label>
+                    <div class="border border-slate-300 dark:border-slate-600 rounded-md max-h-64 overflow-y-auto">
+                        <!-- Calendar 1 -->
+                        <label class="flex items-center p-3 hover:bg-slate-50 dark:hover:bg-slate-800 border-b border-slate-200 dark:border-slate-700 cursor-pointer">
+                            <input type="checkbox" checked class="mr-3 text-blue-500" />
+                            <div class="flex-1">
+                                <div class="flex items-center">
+                                    <span class="font-medium text-sm">Primary Calendar</span>
+                                    <span class="ml-2 px-2 py-1 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 text-xs rounded">
+                                        Primary
+                                    </span>
+                                </div>
+                                <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                                    Your main calendar
+                                </p>
+                            </div>
+                        </label>
+
+                        <!-- Calendar 2 -->
+                        <label class="flex items-center p-3 hover:bg-slate-50 dark:hover:bg-slate-800 border-b border-slate-200 dark:border-slate-700 cursor-pointer">
+                            <input type="checkbox" checked class="mr-3 text-blue-500" />
+                            <div class="flex-1">
+                                <div class="flex items-center">
+                                    <span class="font-medium text-sm">Work</span>
+                                </div>
+                                <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                                    Work-related events
+                                </p>
+                            </div>
+                        </label>
+
+                        <!-- Calendar 3 -->
+                        <label class="flex items-center p-3 hover:bg-slate-50 dark:hover:bg-slate-800 cursor-pointer">
+                            <input type="checkbox" class="mr-3 text-blue-500" />
+                            <div class="flex-1">
+                                <div class="flex items-center">
+                                    <span class="font-medium text-sm">Personal</span>
+                                </div>
+                                <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                                    Personal events
+                                </p>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="flex justify-between pt-4">
+                    <button class="px-4 py-2 text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-slate-100">
+                        Cancel
+                    </button>
+                    <button class="px-6 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-md font-medium">
+                        Create Connector
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Existing Connectors Demo -->
+        <div class="space-y-4">
+            <div class="flex items-center justify-between">
+                <h2 class="text-xl font-semibold">Your Connectors (2)</h2>
+                <button class="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-md text-sm font-medium">
+                    Add Connector
+                </button>
+            </div>
+
+            <!-- Connector 1 -->
+            <div class="bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800 shadow-sm hover:shadow-md transition-shadow">
+                <div class="p-6">
+                    <div class="flex items-start justify-between mb-4">
+                        <div class="flex items-center space-x-3">
+                            <div class="w-8 h-8 bg-red-500 rounded-lg flex items-center justify-center text-white text-sm font-bold">
+                                G
+                            </div>
+                            <div>
+                                <h4 class="text-base font-semibold">Google Connector</h4>
+                                <p class="text-slate-600 dark:text-slate-400 text-sm">
+                                    2 calendars • Created Dec 15, 2024, 7:48 PM
+                                </p>
+                            </div>
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            <span class="px-2 py-1 text-xs rounded-full font-medium bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
+                                validated
+                            </span>
+                        </div>
+                    </div>
+                    
+                    <div class="space-y-2">
+                        <h5 class="text-sm font-medium text-slate-700 dark:text-slate-300">Connected Calendars:</h5>
+                        <div class="space-y-2">
+                            <div class="flex items-center justify-between text-sm">
+                                <span class="text-slate-600 dark:text-slate-300">Primary Calendar</span>
+                                <span class="px-2 py-1 text-xs rounded bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
+                                    original title
+                                </span>
+                            </div>
+                            <div class="flex items-center justify-between text-sm">
+                                <span class="text-slate-600 dark:text-slate-300">Work</span>
+                                <span class="px-2 py-1 text-xs rounded bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
+                                    original title
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mt-4 pt-4 border-t border-slate-200 dark:border-slate-700">
+                        <p class="text-xs text-slate-500 dark:text-slate-400">
+                            Last validated: Dec 15, 2024, 7:50 PM
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Connector 2 -->
+            <div class="bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800 shadow-sm hover:shadow-md transition-shadow">
+                <div class="p-6">
+                    <div class="flex items-start justify-between mb-4">
+                        <div class="flex items-center space-x-3">
+                            <div class="w-8 h-8 bg-blue-500 rounded-lg flex items-center justify-center text-white text-sm font-bold">
+                                M
+                            </div>
+                            <div>
+                                <h4 class="text-base font-semibold">Microsoft 365 Connector</h4>
+                                <p class="text-slate-600 dark:text-slate-400 text-sm">
+                                    1 calendar • Created Dec 14, 2024, 2:15 PM
+                                </p>
+                            </div>
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            <span class="px-2 py-1 text-xs rounded-full font-medium bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200">
+                                pending validation
+                            </span>
+                        </div>
+                    </div>
+                    
+                    <div class="space-y-2">
+                        <h5 class="text-sm font-medium text-slate-700 dark:text-slate-300">Connected Calendars:</h5>
+                        <div class="space-y-2">
+                            <div class="flex items-center justify-between text-sm">
+                                <span class="text-slate-600 dark:text-slate-300">Calendar</span>
+                                <span class="px-2 py-1 text-xs rounded bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
+                                    original title
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
