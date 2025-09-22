@@ -58,14 +58,14 @@ curl -sf http://localhost:3001/healthz
 - For point-in-time recovery (PITR), configure WAL archiving and a backup tool; otherwise use logical dumps.
 
 ## Secrets Rotation
-1. Generate new `SESSION_SECRET` and/or `ENCRYPTION_MASTER_KEY` (base64) securely
+1. Generate new `SESSION_SECRET` and/or `ENCRYPTION_KEY` securely. Keep the key base64-encoded per the shared config helper (`packages/config/src/index.ts`) and the guidance in `.env.example` and `docs/architecture/local-development.md#1-environment-setup`.
 2. Update environment for API/worker containers (Docker/OS secrets)
 3. Restart services; verify health and auth flows
 4. For master key rotation, plan re-encryption strategy if needed
 
 ## Troubleshooting
 - `GET /healthz` returns 503
-  - Check DB connectivity, `ENCRYPTION_MASTER_KEY`, and env validation failures (API logs)
+  - Check DB connectivity, `ENCRYPTION_KEY`, and env validation failures (API logs)
 - OAuth callback errors
   - Verify redirect URIs and tenant configuration; check provider logs
 - Worker not claiming jobs

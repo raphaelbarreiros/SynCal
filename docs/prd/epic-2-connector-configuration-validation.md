@@ -65,7 +65,7 @@ Acceptance Criteria:
 
 ### Story Draft Validation
 - Quick Summary: READY (clarity 9/10). Ensure key management and logging redaction requirements are explicit in acceptance.
-- Technical Guidance: PASS — Use `ENCRYPTION_MASTER_KEY` (base64) from env; prefer libsodium sealed box or Node crypto with AEAD (AES‑256‑GCM). Centralize crypto in `packages/config` and consume via helpers; audit access events.
+- Technical Guidance: PASS — Use `ENCRYPTION_KEY` (base64 via the shared helper in `packages/config/src/index.ts`) from env; prefer libsodium sealed box or Node crypto with AEAD (AES‑256‑GCM). Centralize crypto in `packages/config` and consume via helpers; audit access events.
 - References: `docs/architecture/security.md#secrets-management` and `.env.example` keys; log redaction guidance under Security.
 - Testing Guidance: Unit: encrypt/decrypt round‑trip; tamper ciphertext → fail; missing/short key → startup error. Integration: ensure secrets never appear in logs; audit entries on access.
 

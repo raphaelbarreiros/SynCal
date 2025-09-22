@@ -4,7 +4,7 @@ This guide helps you create OAuth apps for Google Calendar and Microsoft Graph a
 
 ## Security & Ownership
 - Never commit real secrets to Git. Use `.env.local` for development, Docker/OS secrets for production.
-- SynCal encrypts connector secrets at rest using a master key from `ENCRYPTION_MASTER_KEY`.
+- SynCal encrypts connector secrets at rest using the base64-encoded `ENCRYPTION_KEY` provided via the shared config helper (`packages/config/src/index.ts`).
 - Users provision provider apps and secrets; SynCal reads them from env only.
 
 ## Who Does What
@@ -90,7 +90,7 @@ API_BASE_URL=http://localhost:3001
 
 # Session & crypto
 SESSION_SECRET=change-me-session-secret
-ENCRYPTION_MASTER_KEY=base64:CHANGE_ME_32_BYTES
+ENCRYPTION_KEY=base64:CHANGE_ME_32_BYTES
 
 # Google
 GOOGLE_CLIENT_ID=
@@ -106,6 +106,8 @@ MS_REDIRECT_URI=http://localhost:3001/auth/microsoft/callback
 MS_OAUTH_SCOPES="openid email profile offline_access Calendars.ReadWrite"
 ```
 
+`ENCRYPTION_KEY` must stay base64-encoded so the shared config helper (`packages/config/src/index.ts`) can load it. Use the generation guidance in `.env.example` and `docs/architecture/local-development.md#1-environment-setup` when provisioning or rotating the key.
+
 ---
 
 ## Verification Checklist
@@ -118,7 +120,7 @@ MS_OAUTH_SCOPES="openid email profile offline_access Calendars.ReadWrite"
 
 ## Notes on Other Connectors
 - HTML/ICS: No credentials needed; URLs and optional headers are configured in-app.
-- IMAP: Credentials entered in-app; stored encrypted using `ENCRYPTION_MASTER_KEY`.
+- IMAP: Credentials entered in-app; stored encrypted using `ENCRYPTION_KEY`.
 
 ## Security Reminders
 - Do not commit `.env*` files. This repository’s `.gitignore` already excludes them.
