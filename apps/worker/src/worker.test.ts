@@ -1,5 +1,18 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import type { AppLogger } from '@syncal/config';
+
+const startMock = vi.fn();
+const stopMock = vi.fn();
+
+class MockQueueConsumer {
+  start = startMock;
+  stop = stopMock;
+}
+
+vi.mock('./consumers/queue.js', () => ({
+  QueueConsumer: vi.fn(() => new MockQueueConsumer())
+}));
+
 import { createWorker } from './worker.js';
 
 const originalSigint = process.listeners('SIGINT');
@@ -14,18 +27,32 @@ function setup() {
   const logger = { info, error, child } as unknown as AppLogger;
   const exit = vi.fn() as unknown as (code: number) => never;
 
+  const prisma = {
+    $connect: connect,
+    $disconnect: disconnect
+  } as unknown as Parameters<typeof createWorker>[0]['prisma'];
+
   const worker = createWorker({
-    prisma: { $connect: connect, $disconnect: disconnect },
+    prisma,
     logger,
     intervalMs: 1000,
     exit
   });
 
-  return { worker, connect, disconnect, logger, exit, infoMock: info };
+  return {
+    worker,
+    connect,
+    disconnect,
+    logger,
+    exit,
+    infoMock: info
+  };
 }
 
 beforeEach(() => {
   vi.useFakeTimers();
+  startMock.mockReset();
+  stopMock.mockReset();
 });
 
 afterEach(() => {
@@ -41,13 +68,13 @@ afterEach(() => {
   }
 });
 
-describe('worker heartbeat', () => {
-  it('connects to the database and emits startup heartbeat immediately', async () => {
+describe('worker startup', () => {
+  it('connects to the database, starts the consumer, and emits startup heartbeat', async () => {
     const { worker, connect, infoMock } = setup();
     await worker.start();
 
     expect(connect).toHaveBeenCalledTimes(1);
-    expect(infoMock).toHaveBeenCalledWith('Worker connected to database');
+    expect(startMock).toHaveBeenCalledTimes(1);
 
     const heartbeatCall = infoMock.mock.calls.find((call) => call[1] === 'Worker heartbeat');
     expect(heartbeatCall?.[0]).toEqual({ reason: 'startup' });
@@ -64,13 +91,14 @@ describe('worker heartbeat', () => {
     expect(heartbeatCall?.[0]).toEqual({ reason: 'interval' });
   });
 
-  it('disconnects and exits when receiving termination signal', async () => {
+  it('stops the consumer, disconnects, and exits on termination signal', async () => {
     const { worker, disconnect, exit } = setup();
     await worker.start();
 
     process.emit('SIGTERM');
-    await Promise.resolve();
+    await vi.runAllTimersAsync();
 
+    expect(stopMock).toHaveBeenCalledTimes(1);
     expect(disconnect).toHaveBeenCalledTimes(1);
     expect(exit).toHaveBeenCalledWith(0);
   });

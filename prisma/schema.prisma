@@ -78,6 +78,7 @@ model Connector {
   jobLogs              SyncJobLog[]       @relation("LogConnector")
   eventMappings        EventMapping[]     @relation("ConnectorMappings")
   alerts               Alert[]
+  failureStats         ConnectorFailureStat[]
 
   @@map("connectors")
   @@index([ownerId], map: "connectors_owner_idx")
@@ -119,6 +120,7 @@ model SyncPair {
   jobLogs             SyncJobLog[]    @relation("LogPair")
   eventMappings       EventMapping[]  @relation("PairMappings")
   alerts              Alert[]
+  failureStats        ConnectorFailureStat[]
 
   @@map("sync_pairs")
   @@unique([primaryCalendarId, secondaryCalendarId], map: "sync_pairs_unique_pair")
@@ -138,6 +140,7 @@ model SyncJob {
   maxRetries  Int           @map("max_retries") @default(5)
   nextRunAt   DateTime      @map("next_run_at") @default(now())
   lastError   String?       @map("last_error")
+  idempotencyKey String?    @map("idempotency_key") @unique
   createdAt   DateTime      @default(now()) @map("created_at")
   updatedAt   DateTime      @updatedAt @map("updated_at")
 
@@ -168,6 +171,20 @@ model SyncJobLog {
 
   @@map("sync_job_logs")
   @@index([jobId], map: "sync_job_logs_job_idx")
+}
+
+model ConnectorFailureStat {
+  connectorId        String    @map("connector_id") @db.Uuid
+  pairId             String    @map("pair_id") @db.Uuid
+  consecutiveFailures Int      @map("consecutive_failures") @default(0)
+  lastFailureAt      DateTime? @map("last_failure_at")
+  pausedUntil        DateTime? @map("paused_until")
+
+  connector Connector @relation(fields: [connectorId], references: [id], onDelete: Cascade)
+  pair      SyncPair  @relation(fields: [pairId], references: [id], onDelete: Cascade)
+
+  @@id([connectorId, pairId])
+  @@map("connector_failure_stats")
 }
 
 model EventMapping {

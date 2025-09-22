@@ -9,7 +9,8 @@ export async function startWorker(): Promise<void> {
   const worker = createWorker({
     prisma: new PrismaClient(),
     logger,
-    intervalMs: env.WORKER_HEARTBEAT_INTERVAL_MS
+    intervalMs: env.WORKER_HEARTBEAT_INTERVAL_MS,
+    pollIntervalMs: Math.max(1000, Math.floor(env.WORKER_HEARTBEAT_INTERVAL_MS / 2))
   });
 
   await worker.start();
