@@ -21,7 +21,7 @@ This document clarifies which tasks belong to humans (operators/owners) and whic
 ### Developer Agent(s)
 - Implement portal, API, and worker per PRD/architecture.
 - Define Prisma schema and migrations; enforce env schema validation at startup.
-- Implement encryption using `ENCRYPTION_MASTER_KEY`; redact logs; audit secret access.
+- Implement encryption using `ENCRYPTION_KEY` (base64, wired through `packages/config/src/index.ts`); redact logs; audit secret access.
 - Implement OAuth callbacks, token storage (encrypted), connector validation jobs, and fallback ordering.
 - Compose stack configuration (`infra/docker-compose.yml`) and CI workflows (`.github/workflows/*`).
 - Frontend UX: navigation, wizards, accessibility (WCAG AA), performance strategies.
@@ -30,7 +30,7 @@ This document clarifies which tasks belong to humans (operators/owners) and whic
 
 ## Secrets Ownership
 - `SESSION_SECRET` — User/Operator
-- `ENCRYPTION_MASTER_KEY` — User/Operator
+- `ENCRYPTION_KEY` (base64 per `.env.example` and local dev guide) — User/Operator
 - `DATABASE_URL` — User/Operator (Dev provides format requirements)
 - `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REDIRECT_URI`, `GOOGLE_OAUTH_SCOPES` — User/Operator
 - `MS_CLIENT_ID`, `MS_CLIENT_SECRET`, `MS_TENANT_ID`, `MS_REDIRECT_URI`, `MS_OAUTH_SCOPES` — User/Operator

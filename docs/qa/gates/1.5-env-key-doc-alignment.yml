@@ -1,0 +1,38 @@
+schema: 1
+story: '1.5'
+story_title: 'Env Key Doc Alignment'
+gate: PASS
+status_reason: 'Docs now reference ENCRYPTION_KEY with base64 helper guidance and mirror helper links; no stray master key references remain.'
+reviewer: 'Quinn (Test Architect)'
+updated: '2025-09-22T10:00:39Z'
+
+top_issues: []
+waiver: { active: false }
+
+quality_score: 100
+expires: '2025-10-06T00:00:00Z'
+
+evidence:
+  tests_reviewed: 2
+  risks_identified: 0
+  trace:
+    ac_covered: [1, 2, 3]
+    ac_gaps: []
+
+nfr_validation:
+  security:
+    status: PASS
+    notes: 'Key naming and rotation docs align with security helper implementation.'
+  performance:
+    status: PASS
+    notes: 'Documentation-only change; no runtime impact.'
+  reliability:
+    status: PASS
+    notes: 'Runbook guidance updated to prevent misconfiguration during rotations.'
+  maintainability:
+    status: PASS
+    notes: 'Consistent naming reduces confusion; follow-up suggestion noted for link parity.'
+
+recommendations:
+  immediate: []
+  future: []
