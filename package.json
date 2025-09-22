@@ -12,6 +12,7 @@
     "dev:web": "npm run dev --workspace @syncal/web",
     "dev:worker": "npm run dev --workspace @syncal/worker",
     "lint": "echo 'lint pipeline not yet configured'",
+    "pretest": "npm run build --workspace @syncal/core --if-present",
     "prisma:generate": "prisma generate",
     "prisma:migrate:deploy": "prisma migrate deploy",
     "smoke": "node scripts/smoke.mjs",
