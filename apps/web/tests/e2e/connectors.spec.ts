@@ -29,8 +29,29 @@ test.describe('Connector wizard', () => {
   });
 
   test('completes Google connector onboarding with validation summary', async ({ page }) => {
-    let issuedState = '';
-    let contextEntries: Array<Record<string, unknown>> = [];
+    const issuedState = 'state-test';
+    let contextEntries: Array<Record<string, unknown>> = [
+      {
+        provider: 'google',
+        state: issuedState,
+        profile: {
+          id: 'user-1',
+          email: 'admin@example.com',
+          name: 'Calendar Admin'
+        },
+        scopes: ['openid', 'email', 'profile', 'https://www.googleapis.com/auth/calendar'],
+        discoveredCalendars: [
+          {
+            id: 'cal-primary',
+            name: 'Primary',
+            description: 'Main workspace calendar',
+            timeZone: 'UTC',
+            isPrimary: true,
+            canEdit: true
+          }
+        ]
+      }
+    ];
     let connectorsResponse: { connectors: Array<Record<string, unknown>> } = {
       connectors: []
     };
@@ -115,42 +136,6 @@ test.describe('Connector wizard', () => {
       });
     });
 
-    await page.route('**/auth/oauth/start', async (route) => {
-      const state = `state-${Date.now()}`;
-      issuedState = state;
-      contextEntries = [
-        {
-          provider: 'google',
-          state,
-          profile: {
-            id: 'user-1',
-            email: 'admin@example.com',
-            name: 'Calendar Admin'
-          },
-          scopes: ['openid', 'email', 'profile', 'https://www.googleapis.com/auth/calendar'],
-          discoveredCalendars: [
-            {
-              id: 'cal-primary',
-              name: 'Primary',
-              description: 'Main workspace calendar',
-              timeZone: 'UTC',
-              isPrimary: true,
-              canEdit: true
-            }
-          ]
-        }
-      ];
-
-      await route.fulfill({
-        status: 200,
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({
-          authorizationUrl: `https://auth.example.test?state=${state}`,
-          state
-        })
-      });
-    });
-
     const connectorsResponsePromise = page.waitForResponse((response) =>
       response.url().includes('/connectors') && response.request().method() === 'GET'
     );
@@ -171,8 +156,8 @@ test.describe('Connector wizard', () => {
       page.getByText('Connector Marketing Google Workspace is ready.', { exact: false })
     ).toBeVisible();
 
-    await expect(page.getByRole('cell', { name: 'google' })).toBeVisible();
-    await expect(page.getByRole('cell', { name: 'validated' })).toBeVisible();
+    await expect(page.getByRole('cell').filter({ hasText: /^google$/i })).toBeVisible();
+    await expect(page.getByRole('cell').filter({ hasText: /^validated$/i })).toBeVisible();
   });
 
   test('surfaces OAuth error state inline', async ({ page }) => {
