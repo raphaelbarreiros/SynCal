@@ -18,11 +18,13 @@
     "react-dom": "^19.0.0"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.10.0",
+    "@playwright/test": "^1.55.0",
+    "@tailwindcss/postcss": "^4.1.13",
+    "@tsconfig/next": "^2.0.3",
     "@types/node": "^22.7.5",
     "@types/react": "^19.0.1",
     "@types/react-dom": "^19.0.1",
-    "@tsconfig/next": "^2.0.3",
-    "@playwright/test": "^1.55.0",
     "autoprefixer": "^10.4.20",
     "postcss": "^8.4.47",
     "tailwindcss": "^4.1.13",

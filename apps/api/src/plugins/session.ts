@@ -21,7 +21,7 @@ export default fp(async (fastify: FastifyInstance) => {
     cookie: {
       httpOnly: true,
       secure: env.NODE_ENV === 'production',
-      sameSite: 'strict',
+      sameSite: 'lax',
       path: '/',
       maxAge: SESSION_TTL_MS
     },

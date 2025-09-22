@@ -5,18 +5,25 @@ import { setAdminSession, destroyAdminSession } from '../../lib/session.js';
 import { authenticateAdmin, parseLoginRequest } from '../../services/auth.js';
 
 export async function sessionRoutes(fastify: FastifyInstance): Promise<void> {
+  const maxLoginAttempts = fastify.appConfig.AUTH_SESSION_RATE_LIMIT_MAX;
+
   fastify.post(
     '/auth/session',
     {
       config: {
         rateLimit: {
-          max: 5,
+          max: maxLoginAttempts,
           timeWindow: '1 minute'
         }
       },
       preHandler: [fastify.csrfProtection]
     },
     async function (request, reply) {
+      request.log.info({
+        headers: request.headers,
+        hasSession: Boolean((request.session as any)?._csrf),
+        csrfToken: request.headers['x-csrf-token'] || request.headers['csrf-token']
+      }, 'login request metadata');
       try {
         const credentials = parseLoginRequest(request.body);
         const result = await authenticateAdmin(fastify.repos.adminUsers, credentials);

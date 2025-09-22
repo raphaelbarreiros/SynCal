@@ -1,18 +1,19 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { FastifyRequest } from 'fastify';
+import type { FastifySessionObject } from '@fastify/session';
 import { destroyAdminSession, getAdminSession, setAdminSession, touchAdminSession } from './session.js';
 
 type MutableRequest = Pick<FastifyRequest, 'session'>;
 
 function createRequest(): MutableRequest {
-  const session: Record<string, unknown> & {
-    destroy: ReturnType<typeof vi.fn>;
-  } = {
+  const session = {
     destroy: vi.fn().mockResolvedValue(undefined)
+  } as Partial<FastifySessionObject> & {
+    destroy: ReturnType<typeof vi.fn>;
   };
 
   return {
-    session: session as MutableRequest['session']
+    session: session as FastifySessionObject
   };
 }
 

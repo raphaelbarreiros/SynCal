@@ -19,7 +19,17 @@ async function requestCsrfToken(): Promise<string> {
   return payload.token;
 }
 
-export default function LogoutButton() {
+interface LogoutButtonProps {
+  className?: string;
+  buttonClassName?: string;
+  label?: string;
+}
+
+export default function LogoutButton({
+  className,
+  buttonClassName,
+  label = 'Sign out'
+}: LogoutButtonProps) {
   const router = useRouter();
   const [csrfToken, setCsrfToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -60,6 +70,11 @@ export default function LogoutButton() {
       });
 
       if (response.status === 204) {
+        if (typeof window !== 'undefined') {
+          window.location.assign('/login');
+          return;
+        }
+
         router.replace('/login');
         router.refresh();
         return;
@@ -75,8 +90,16 @@ export default function LogoutButton() {
     }
   }, [csrfToken, refreshToken, router]);
 
+  const containerClassName = className ? `${className}` : 'space-y-3';
+
+  const baseButtonClasses =
+    'inline-flex items-center justify-center rounded-md px-4 py-2 text-sm font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 disabled:cursor-not-allowed';
+  const variantButtonClasses =
+    buttonClassName ??
+    'bg-slate-800 text-slate-100 hover:bg-slate-700 disabled:bg-slate-800/60 dark:bg-slate-700 dark:hover:bg-slate-600 dark:text-slate-50';
+
   return (
-    <div className="space-y-3">
+    <div className={containerClassName || undefined}>
       {errorMessage && (
         <p role="alert" className="text-sm text-red-400">
           {errorMessage}
@@ -86,9 +109,11 @@ export default function LogoutButton() {
         type="button"
         onClick={handleSignOut}
         disabled={isLoading}
-        className="rounded-md bg-slate-800 px-4 py-2 text-sm font-semibold text-slate-100 transition hover:bg-slate-700 disabled:cursor-not-allowed disabled:bg-slate-800/60"
+        aria-busy={isLoading}
+        data-state={isLoading ? 'loading' : 'idle'}
+        className={`${baseButtonClasses} ${variantButtonClasses}`}
       >
-        {isLoading ? 'Signing out…' : 'Sign out'}
+        {label}
       </button>
     </div>
   );

@@ -3,7 +3,11 @@
   "compilerOptions": {
     "strict": true,
     "baseUrl": ".",
-    "target": "ES2017"
+    "target": "ES2017",
+    "paths": {
+      "@syncal/ui": ["../../packages/ui/src/index.ts"],
+      "@syncal/ui/*": ["../../packages/ui/src/*"]
+    }
   },
   "include": [
     "**/*.ts",

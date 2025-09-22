@@ -1,12 +1,15 @@
 import { describe, it, expect, afterEach, vi } from 'vitest';
 import { NextRequest } from 'next/server';
-import { middleware } from './middleware';
+import middleware from './src/middleware';
 
 const SESSION_COOKIE = 'syn_session';
 
 describe('web middleware auth gate', () => {
   afterEach(() => {
     vi.restoreAllMocks();
+    delete process.env.API_BASE_URL;
+    delete process.env.NEXT_PUBLIC_API_BASE_URL;
+    delete process.env.INTERNAL_API_BASE_URL;
   });
 
   it('redirects to the login page when no session cookie is present', async () => {
@@ -69,5 +72,25 @@ describe('web middleware auth gate', () => {
 
     expect(response?.headers.get('location')).toBeNull();
     expect(response?.headers.get('set-cookie')).toMatch(/syn_session=;/);
+  });
+
+  it('falls back to the internal API hostname when the public host is unreachable', async () => {
+    process.env.API_BASE_URL = 'http://localhost:3001';
+    process.env.NEXT_PUBLIC_API_BASE_URL = 'http://localhost:3001';
+
+    const fetchMock = vi.spyOn(global, 'fetch');
+    fetchMock.mockRejectedValueOnce(new Error('connect ECONNREFUSED'));
+    fetchMock.mockResolvedValueOnce(new Response('{}', { status: 200 }));
+
+    const request = new NextRequest('http://localhost/dashboard', {
+      headers: new Headers({ cookie: `${SESSION_COOKIE}=valid` })
+    });
+
+    const response = await middleware(request);
+
+    expect(response?.headers.get('location')).toBeNull();
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(fetchMock.mock.calls[0]?.[0]).toContain('localhost:3001');
+    expect(fetchMock.mock.calls[1]?.[0]).toContain('api:3001');
   });
 });

@@ -20,7 +20,8 @@ const baseEnv: AppEnv = {
   INITIAL_ADMIN_EMAIL: undefined,
   INITIAL_ADMIN_PASSWORD: undefined,
   LOG_LEVEL: 'silent',
-  WORKER_HEARTBEAT_INTERVAL_MS: 5000
+  WORKER_HEARTBEAT_INTERVAL_MS: 5000,
+  AUTH_SESSION_RATE_LIMIT_MAX: 25
 };
 
 interface AdminRepoStub {
