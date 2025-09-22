@@ -1,58 +1,44 @@
 schema: 1
 story: '2.1'
 story_title: 'Google & Microsoft OAuth Connector Flow'
-gate: CONCERNS
-status_reason: 'Portal currently shows a success banner even when post-setup validation fails, so admins lose visibility into OAuth errors.'
+gate: PASS
+status_reason: 'Validation feedback now surfaces in the portal and OAuth credential guards prevent misconfigured authorization flows; no blocking issues remain.'
 reviewer: 'Quinn (Test Architect)'
-updated: '2025-09-22T19:51:27Z'
+updated: '2025-09-22T22:16:44Z'
 
-top_issues:
-  - severity: high
-    finding: 'Connector wizard always surfaces a success message after createConnector—even when validation returns an error—so AC4 feedback is missing.'
-    refs:
-      - apps/web/src/app/(connectors)/connectors/page.tsx:380
-    suggested_owner: dev
-  - severity: medium
-    finding: 'OAuth credential helpers skip redirect URI/tenant validation, leading to malformed provider URLs when env vars are absent.'
-    refs:
-      - apps/api/src/services/connectors.ts:119
-    suggested_owner: dev
+top_issues: []
 
 waiver:
   active: false
 
-quality_score: 80
-expires: '2025-10-06T19:51:27Z'
+quality_score: 100
+expires: '2025-10-06T22:16:44Z'
 
 evidence:
-  tests_reviewed: 16
-  risks_identified: 2
+  tests_reviewed: 17
+  risks_identified: 0
   trace:
-    ac_covered: [1, 2, 3]
-    ac_gaps: [4]
+    ac_covered: [1, 2, 3, 4]
+    ac_gaps: []
 
 nfr_validation:
   security:
-    status: CONCERNS
-    notes: 'Require redirect URI / tenant guards before emitting authorization URLs to avoid leaking misconfigurations.'
+    status: PASS
+    notes: 'Credential checks fail fast before emitting OAuth URLs; secrets remain encrypted via shared helper.'
   performance:
     status: PASS
-    notes: 'Validation sampling and job scheduling stay within expected bounds.'
+    notes: 'Validation sampling plus queued follow-up jobs match documented throughput expectations.'
   reliability:
-    status: CONCERNS
-    notes: 'Admins receive false-positive success feedback when validation fails, blocking timely remediation.'
+    status: PASS
+    notes: 'Wizard now surfaces validation outcomes so admins can act on connector health regressions.'
   maintainability:
     status: PASS
-    notes: 'Code structure and typing remain clean; addressing above items keeps debt low.'
+    notes: 'Structure adheres to architecture guidance; minor optional test addition noted.'
 
 recommendations:
-  immediate:
-    - action: 'Display validation error feedback and actionable retry guidance when createConnector returns pending_validation.'
+  immediate: []
+  future:
+    - action: 'Add a Playwright flow covering the validation-error banner to lock the regression.'
       refs:
-        - apps/web/src/app/(connectors)/connectors/page.tsx:295
+        - apps/web/tests/e2e/connectors.spec.ts
       suggested_owner: dev
-    - action: 'Assert required OAuth env vars (redirect URIs, tenant) before constructing provider URLs; fail fast with descriptive errors.'
-      refs:
-        - apps/api/src/services/connectors.ts:72
-      suggested_owner: dev
-  future: []
