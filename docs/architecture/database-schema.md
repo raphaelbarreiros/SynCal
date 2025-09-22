@@ -84,6 +84,15 @@ CREATE TABLE sync_job_logs (
 );
 CREATE INDEX sync_job_logs_job_idx ON sync_job_logs(job_id);
 
+CREATE TABLE connector_failure_stats (
+  connector_id UUID NOT NULL REFERENCES connectors(id) ON DELETE CASCADE,
+  pair_id UUID NOT NULL REFERENCES sync_pairs(id) ON DELETE CASCADE,
+  consecutive_failures SMALLINT NOT NULL DEFAULT 0,
+  last_failure_at TIMESTAMPTZ,
+  paused_until TIMESTAMPTZ,
+  PRIMARY KEY (connector_id, pair_id)
+);
+
 CREATE TABLE event_mappings (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   pair_id UUID NOT NULL REFERENCES sync_pairs(id) ON DELETE CASCADE,
