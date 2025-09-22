@@ -35,6 +35,10 @@
 
 **Dependencies:** PostgreSQL, `packages/connectors`, `packages/core`, prom-client for job metrics, pino logging.
 
+**Operational Contracts:**
+- Export Prometheus metrics `sync_jobs_total{status,connector_id}`, `sync_jobs_queue_depth{status}`, `sync_job_duration_seconds{outcome}`, and `sync_job_retries_total{connector_id}`.
+- Honor circuit-breaker state from `connector_failure_stats` by skipping `paused_until > NOW()` jobs and emitting alerts when thresholds trip.
+
 **Technology Stack:** Node.js 22 worker process, Prisma client, concurrency guard utilities, prom-client instrumentation.
 
 ### Connectors Library

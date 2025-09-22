@@ -17,7 +17,8 @@
 ### Error Handling Patterns
 #### External API Errors
 - **Retry Policy:** Exponential backoff (1, 2, 4, 8, 16 minutes, capped at 30) with max retries configurable per connector.
-- **Circuit Breaker:** Trip after 5 consecutive provider failures; pause job scheduling and surface alert.
+- **Jitter:** Randomize each retry interval by ±10% to avoid thundering herds while staying within the 30-minute cap.
+- **Circuit Breaker:** Track failures in `connector_failure_stats` (`connector_id`, `pair_id`, `consecutive_failures`, `last_failure_at`, `paused_until`); trip after 5 consecutive failures by setting `paused_until = NOW() + INTERVAL '30 minutes'`, emitting an alert, and requiring scheduler/API to skip or 409 until a successful run resets counters.
 - **Timeout Configuration:** HTTP requests default 15s timeout with abort controller; IMAP/ICS fetch limited to 30s.
 - **Error Translation:** Map provider error codes to normalized `ExternalServiceError` with user-friendly summary and technical detail in metadata.
 
@@ -35,6 +36,7 @@
 
 #### Data Consistency
 - **Transaction Strategy:** Use Prisma transactions for multi-table operations (connectors + calendars, mapping updates); wrap in `prisma.$transaction` with SERIALIZABLE isolation for critical writes.
+- **Resiliency State:** Update `connector_failure_stats` alongside job status changes so pauses/alerts remain consistent across worker and API surfaces.
 - **Compensation Logic:** Worker records partial failures and queues clean-up job if mirrored event updates partially succeed.
 - **Idempotency:** Enforced via unique constraint on `(source_calendar_id, source_event_id)` and job deduplication; API endpoints accept `Idempotency-Key` header for scheduling requests.
 
