@@ -342,7 +342,7 @@ describeIfReady('QueueConsumer integration', () => {
 
     await (consumer as any).processJob(jobRecord);
 
-    const metricsMap = metricsRegistry.getMetricsAsJSON();
+    const metricsMap = await metricsRegistry.getMetricsAsJSON();
     const lifecycle = metricsMap.find((metric) => metric.name === 'sync_jobs_total');
     expect(lifecycle?.values.some((entry: any) => entry.labels.status === 'completed')).toBe(true);
 

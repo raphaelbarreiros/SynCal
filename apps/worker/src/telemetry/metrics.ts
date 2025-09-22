@@ -4,7 +4,7 @@ import type { SyncJobOutcome, SyncJobStatus } from '@syncal/core';
 
 export const metricsRegistry = new Registry();
 
-const trackedStatuses: SyncJobStatus[] = ['pending', 'retrying', 'in_progress', 'failed', 'completed'];
+const trackedStatuses: SyncJobStatus[] = ['pending', 'retrying', 'in_progress'];
 
 export const jobLifecycleCounter = new Counter({
   name: 'sync_jobs_total',

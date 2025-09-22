@@ -14,6 +14,9 @@ const CIRCUIT_BREAKER_THRESHOLD = 5;
 const CIRCUIT_BREAKER_PAUSE_MS = 30 * 60_000;
 
 const CLAIMABLE_STATUSES: SyncJobStatus[] = ['pending', 'retrying'];
+const CLAIMABLE_STATUS_SQL = Prisma.join(
+  CLAIMABLE_STATUSES.map((status) => Prisma.sql`${status}::"SyncJobStatus"`)
+);
 
 interface FailureResult {
   outcome: SyncJobOutcome;
@@ -107,12 +110,16 @@ export class QueueConsumer {
           Prisma.sql`
             SELECT j.id
             FROM "sync_jobs" j
-            LEFT JOIN "connector_failure_stats" cfs
-              ON cfs.connector_id = j.connector_id
-             AND cfs.pair_id = j.pair_id
-            WHERE j.status IN (${Prisma.join(CLAIMABLE_STATUSES)})
+            WHERE j.status IN (${CLAIMABLE_STATUS_SQL})
               AND j.next_run_at <= NOW()
-              AND (cfs.paused_until IS NULL OR cfs.paused_until <= NOW())
+              AND NOT EXISTS (
+                SELECT 1
+                FROM "connector_failure_stats" cfs
+                WHERE cfs.connector_id = j.connector_id
+                  AND cfs.pair_id = j.pair_id
+                  AND cfs.paused_until IS NOT NULL
+                  AND cfs.paused_until > NOW()
+              )
             ORDER BY j.priority DESC, j.next_run_at ASC
             LIMIT 1
             FOR UPDATE SKIP LOCKED
@@ -286,7 +293,7 @@ export class QueueConsumer {
         }
       });
 
-      const failureStats = await tx.connectorFailureStat.upsert({
+      let failureStats = await tx.connectorFailureStat.upsert({
         where: {
           connectorId_pairId: {
             connectorId: job.connectorId,
@@ -304,6 +311,21 @@ export class QueueConsumer {
           lastFailureAt: finishedAt
         }
       });
+
+      if (failureStats.consecutiveFailures < newRetryCount) {
+        failureStats = await tx.connectorFailureStat.update({
+          where: {
+            connectorId_pairId: {
+              connectorId: job.connectorId,
+              pairId: job.pairId
+            }
+          },
+          data: {
+            consecutiveFailures: newRetryCount,
+            lastFailureAt: finishedAt
+          }
+        });
+      }
 
       if (
         failureStats.consecutiveFailures >= CIRCUIT_BREAKER_THRESHOLD &&
