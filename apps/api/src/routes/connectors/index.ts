@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import type { FastifyInstance } from 'fastify';
 import { createConnector, listConnectors } from '../../services/connectors.js';
+import { validateConnectorConfiguration } from '../../services/connector-validation.js';
 
 const ConnectorIdParamSchema = z.object({
   connectorId: z.string().uuid()
@@ -80,6 +81,30 @@ export async function connectorRoutes(fastify: FastifyInstance): Promise<void> {
         }
 
         request.log.error({ err: error }, 'Failed to create connector');
+        return reply.status(422).send({ error: 'Connector validation failed' });
+      }
+    }
+  );
+
+  fastify.post(
+    '/connectors/validate',
+    {
+      onRequest: [fastify.requireAdmin],
+      preHandler: [fastify.csrfProtection]
+    },
+    async function (request, reply) {
+      try {
+        const result = await validateConnectorConfiguration(request.body, {
+          fetch
+        });
+
+        return reply.status(200).send(result);
+      } catch (error) {
+        if (error instanceof z.ZodError) {
+          return reply.status(400).send({ error: 'Invalid connector payload' });
+        }
+
+        request.log.error({ err: error }, 'Connector validation failed');
         return reply.status(422).send({ error: 'Connector validation failed' });
       }
     }

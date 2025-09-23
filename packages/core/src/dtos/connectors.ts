@@ -1,5 +1,14 @@
 import { z } from 'zod';
 
+export const ConnectorTypeSchema = z.enum([
+  'google',
+  'microsoft',
+  'html_ics',
+  'imap',
+  'self_managed'
+]);
+export type ConnectorType = z.infer<typeof ConnectorTypeSchema>;
+
 export const OAuthProviderSchema = z.enum(['google', 'microsoft']);
 export type OAuthProvider = z.infer<typeof OAuthProviderSchema>;
 
@@ -115,12 +124,26 @@ export type ConnectorConfig = z.infer<typeof ConnectorConfigSchema>;
 
 export const ConnectorResponseSchema = z.object({
   id: z.string().uuid(),
-  type: OAuthProviderSchema,
+  type: ConnectorTypeSchema,
   displayName: z.string().nullable(),
   status: ConnectorStatusSchema,
   lastValidatedAt: z.string().nullable().optional(),
   calendars: z.array(ConnectorCalendarSchema).default([]),
   config: ConnectorConfigSchema.optional(),
+  maskedUrl: z.string().optional(),
+  lastSuccessfulFetchAt: z.string().nullable().optional(),
+  previewEvents: z
+    .array(
+      z.object({
+        uid: z.string(),
+        summary: z.string().optional(),
+        startsAt: z.string(),
+        endsAt: z.string().optional(),
+        allDay: z.boolean().default(false)
+      })
+    )
+    .optional(),
+  targetCalendarLabel: z.string().optional(),
   createdAt: z.string(),
   updatedAt: z.string()
 });
@@ -130,3 +153,59 @@ export const ConnectorListResponseSchema = z.object({
   connectors: z.array(ConnectorResponseSchema)
 });
 export type ConnectorListResponse = z.infer<typeof ConnectorListResponseSchema>;
+
+export const HtmlIcsConnectorConfigSchema = z
+  .object({
+    feedUrl: z
+      .string()
+      .url()
+      .refine((value) => value.startsWith('https://'), {
+        message: 'Feed URL must use HTTPS'
+      }),
+    authHeader: z.string().min(1).optional(),
+    authToken: z.string().min(1).optional(),
+    targetCalendarLabel: z.string().min(1)
+  })
+  .superRefine((value, ctx) => {
+    if ((value.authHeader && !value.authToken) || (!value.authHeader && value.authToken)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'Auth header name and token must both be provided',
+        path: value.authHeader ? ['authToken'] : ['authHeader']
+      });
+    }
+  });
+export type HtmlIcsConnectorConfig = z.infer<typeof HtmlIcsConnectorConfigSchema>;
+
+export const ValidationEventPreviewSchema = z.object({
+  uid: z.string(),
+  summary: z.string().optional(),
+  startsAt: z.string(),
+  endsAt: z.string().optional(),
+  allDay: z.boolean().default(false)
+});
+export type ValidationEventPreview = z.infer<typeof ValidationEventPreviewSchema>;
+
+export const ValidationIssueSchema = z.object({
+  code: z.string(),
+  message: z.string(),
+  severity: z.enum(['info', 'warning', 'error']).default('error')
+});
+export type ValidationIssue = z.infer<typeof ValidationIssueSchema>;
+
+export const ConnectorValidationResultSchema = z.object({
+  status: z.enum(['ok', 'failed']),
+  maskedUrl: z.string().optional(),
+  previewEvents: z.array(ValidationEventPreviewSchema).optional(),
+  lastSuccessfulFetchAt: z.string().optional(),
+  issues: z.array(ValidationIssueSchema).default([])
+});
+export type ConnectorValidationResult = z.infer<typeof ConnectorValidationResultSchema>;
+
+export const ValidateConnectorRequestSchema = z.discriminatedUnion('type', [
+  z.object({
+    type: z.literal('html_ics'),
+    config: HtmlIcsConnectorConfigSchema
+  })
+]);
+export type ValidateConnectorRequest = z.infer<typeof ValidateConnectorRequestSchema>;
