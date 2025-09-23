@@ -1,7 +1,8 @@
 import type {
   ConnectorValidationResult,
   HtmlIcsConnectorConfig,
-  HtmlIcsFetchCache
+  HtmlIcsFetchCache,
+  HtmlIcsValidationMetadata
 } from '@syncal/core';
 
 export type OAuthProvider = 'google' | 'microsoft';
@@ -67,6 +68,7 @@ export interface HtmlIcsAdapterOptions {
   timeoutMs?: number;
   now?: () => Date;
   cache?: HtmlIcsFetchCache | null;
+  previousValidation?: HtmlIcsValidationMetadata | null;
 }
 
 export interface OAuthAuthorizationUrlParams {

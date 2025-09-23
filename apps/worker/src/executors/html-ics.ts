@@ -6,6 +6,7 @@ import {
 import { validateHtmlIcsFeed } from '@syncal/connectors';
 import { decryptJson } from '@syncal/config';
 import type { JobExecutor, JobExecutionResult } from './sync.js';
+import { toJsonValue } from './utils.js';
 
 interface HtmlIcsCredentials {
   feedUrl: string;
@@ -17,10 +18,6 @@ interface HtmlIcsSyncExecutorOptions {
   fetch?: typeof fetch;
   timeoutMs?: number;
   now?: () => Date;
-}
-
-function toJsonValue<T>(value: T): Prisma.JsonValue {
-  return JSON.parse(JSON.stringify(value)) as Prisma.JsonValue;
 }
 
 function buildDefaultMetadata(nowIso: string): HtmlIcsConnectorMetadata {
@@ -99,7 +96,8 @@ export function createHtmlIcsSyncExecutor(options: HtmlIcsSyncExecutorOptions = 
       fetch: fetchImpl,
       timeoutMs,
       nowFactory,
-      cache: currentMetadata.fetchCache ?? undefined
+      cache: currentMetadata.fetchCache ?? undefined,
+      previousValidation: currentMetadata.validationMetadata
     });
 
     const succeeded = validation.status === 'ok';

@@ -4,6 +4,7 @@ import {
   type ConnectorValidationResult,
   type HtmlIcsConnectorConfig,
   type HtmlIcsFetchCache,
+  type HtmlIcsValidationMetadata,
   type ValidationIssue
 } from '@syncal/core';
 import { HtmlIcsAdapterOptions, type ConnectorAdapter } from '../types.js';
@@ -31,6 +32,13 @@ class TimeoutError extends Error {
   constructor(message: string) {
     super(message);
     this.name = 'TimeoutError';
+  }
+}
+
+class NotModifiedError extends Error {
+  constructor(readonly cacheMetadata?: HtmlIcsFetchCache) {
+    super('Feed not modified');
+    this.name = 'NotModifiedError';
   }
 }
 
@@ -76,6 +84,7 @@ export function createHtmlIcsAdapter(options: HtmlIcsAdapterOptions = {}): Conne
   const timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
   const nowFactory = options.now ?? (() => new Date());
   const cache = options.cache ?? undefined;
+  const previousValidation = options.previousValidation ?? undefined;
 
   return {
     provider: 'html_ics',
@@ -84,7 +93,8 @@ export function createHtmlIcsAdapter(options: HtmlIcsAdapterOptions = {}): Conne
         fetch: fetchImpl,
         timeoutMs,
         nowFactory,
-        cache
+        cache,
+        previousValidation
       });
     }
   } satisfies ConnectorAdapter;
@@ -93,6 +103,7 @@ export function createHtmlIcsAdapter(options: HtmlIcsAdapterOptions = {}): Conne
 interface ValidateFeedDependencies extends FetchDependencies {
   nowFactory: () => Date;
   cache?: HtmlIcsFetchCache;
+  previousValidation?: HtmlIcsValidationMetadata;
 }
 
 export async function validateHtmlIcsFeed(
@@ -133,6 +144,31 @@ export async function validateHtmlIcsFeed(
       cacheMetadata: feed.cacheMetadata
     });
   } catch (error) {
+    if (error instanceof NotModifiedError) {
+      const cacheMetadata = error.cacheMetadata ?? deps.cache;
+      const previous = deps.previousValidation;
+
+      if (previous) {
+        return ConnectorValidationResultSchema.parse({
+          status: 'ok',
+          maskedUrl: previous.maskedUrl ?? maskedUrl,
+          previewEvents: previous.previewEvents,
+          lastSuccessfulFetchAt: previous.lastSuccessfulFetchAt,
+          issues: previous.issues,
+          cacheMetadata
+        });
+      }
+
+      return ConnectorValidationResultSchema.parse({
+        status: 'ok',
+        maskedUrl,
+        previewEvents: [],
+        lastSuccessfulFetchAt: deps.cache?.lastModified,
+        issues: [],
+        cacheMetadata
+      });
+    }
+
     return ConnectorValidationResultSchema.parse({
       status: 'failed',
       maskedUrl,
@@ -177,6 +213,21 @@ async function fetchFeed(
       signal: controller.signal
     });
 
+    const etag = response.headers.get('etag') ?? cache?.etag ?? undefined;
+    const lastModified = response.headers.get('last-modified') ?? cache?.lastModified ?? undefined;
+
+    const cacheMetadata =
+      etag || lastModified
+        ? {
+            ...(etag ? { etag } : {}),
+            ...(lastModified ? { lastModified } : {})
+          }
+        : undefined;
+
+    if (response.status === 304) {
+      throw new NotModifiedError(cacheMetadata);
+    }
+
     const body = await response.text();
 
     if (!response.ok) {
@@ -186,20 +237,16 @@ async function fetchFeed(
     if (!body.trim()) {
       throw new ParseError('Feed response was empty.');
     }
-    const etag = response.headers.get('etag') ?? undefined;
-    const lastModified = response.headers.get('last-modified') ?? undefined;
 
     return {
       body,
-      cacheMetadata:
-        etag || lastModified
-          ? {
-              ...(etag ? { etag } : {}),
-              ...(lastModified ? { lastModified } : {})
-            }
-          : undefined
+      cacheMetadata
     } satisfies FetchFeedResult;
   } catch (error) {
+    if (error instanceof NotModifiedError) {
+      throw error;
+    }
+
     if (error instanceof HttpError) {
       throw error;
     }

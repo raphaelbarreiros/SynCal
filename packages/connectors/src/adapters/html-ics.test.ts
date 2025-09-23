@@ -115,6 +115,63 @@ describe('createHtmlIcsAdapter', () => {
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
+  it('treats HTTP 304 responses as success using cached validation metadata', async () => {
+    const fetchMock = vi.fn(async () => ({
+      status: 304,
+      headers: new Headers({
+        ETag: '"etag-latest"',
+        'Last-Modified': 'Fri, 03 Jan 2025 00:00:00 GMT'
+      }),
+      ok: false,
+      text: async () => ''
+    }) as unknown as Response);
+
+    const adapter = createHtmlIcsAdapter({
+      fetch: fetchMock,
+      now: () => NOW,
+      cache: {
+        etag: '"etag-previous"',
+        lastModified: 'Thu, 02 Jan 2025 00:00:00 GMT'
+      },
+      previousValidation: {
+        status: 'ok',
+        maskedUrl: 'https://calendar.example.com/…/feed.ics',
+        previewEvents: [
+          {
+            uid: 'cached-event',
+            summary: 'Cached Meeting',
+            startsAt: '2026-01-01T10:00:00.000Z',
+            endsAt: '2026-01-01T11:00:00.000Z',
+            allDay: false
+          }
+        ],
+        lastSuccessfulFetchAt: '2026-01-01T00:00:00.000Z',
+        issues: []
+      }
+    });
+
+    const result = await adapter.validate({
+      feedUrl: 'https://calendar.example.com/feed.ics',
+      targetCalendarLabel: 'Ops'
+    });
+
+    expect(result.status).toBe('ok');
+    expect(result.previewEvents).toEqual([
+      {
+        uid: 'cached-event',
+        summary: 'Cached Meeting',
+        startsAt: '2026-01-01T10:00:00.000Z',
+        endsAt: '2026-01-01T11:00:00.000Z',
+        allDay: false
+      }
+    ]);
+    expect(result.lastSuccessfulFetchAt).toBe('2026-01-01T00:00:00.000Z');
+    expect(result.cacheMetadata).toEqual({
+      etag: '"etag-latest"',
+      lastModified: 'Fri, 03 Jan 2025 00:00:00 GMT'
+    });
+  });
+
   it('maps abort errors to timeout issues', async () => {
     const fetchMock = vi.fn(async () => {
       const error = new Error('Aborted');
