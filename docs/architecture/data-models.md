@@ -31,12 +31,16 @@
 **Key Attributes:**
 - `id`: UUID — primary key
 - `provider_calendar_id`: string — external calendar identifier
+- `display_name`: string — admin-facing label stored verbatim (HTML/ICS connectors persist the wizard's target calendar label here)
 - `privacy_mode`: enum — `original_title` or `busy_placeholder`
 
 **Relationships:**
 - Belongs to `Connector`
 - Participates in `SyncPair` configurations
 - Has many `EventMapping` entries as source or mirror calendar
+
+**Notes:**
+- HTML/ICS connectors do not discover calendars remotely; the wizard-supplied target calendar label is stored in `display_name` and surfaced via the `targetCalendarLabel` DTO field.
 
 ### SyncPair
 **Purpose:** Defines the relationship between calendars that should stay in sync, including fallback ordering across connectors.
@@ -87,5 +91,3 @@
 **Relationships:**
 - Belongs to `AdminUser`
 - Optionally references `Connector` or `SyncPair` for additional context
-
-

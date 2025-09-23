@@ -19,10 +19,26 @@ CREATE TABLE connectors (
   credentials_encrypted BYTEA NOT NULL,
   config_json JSONB NOT NULL,
   last_validated_at TIMESTAMPTZ,
+  last_successful_fetch_at TIMESTAMPTZ,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 CREATE INDEX connectors_owner_idx ON connectors(owner_id);
+
+-- `config_json` structure
+-- {
+--   "validationMetadata": {
+--     "maskedUrl": string,
+--     "previewEvents": ValidationEventPreview[],
+--     "lastSuccessfulFetchAt": timestamptz | null,
+--     "issues": ValidationIssue[]
+--   },
+--   "fetchCache": {
+--     "etag": string | null,
+--     "lastModified": string | null,
+--     "fetchedAt": timestamptz | null
+--   }
+-- }
 
 CREATE TABLE calendars (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -154,6 +170,22 @@ CREATE TRIGGER set_timestamp_sync_jobs
 BEFORE UPDATE ON sync_jobs
 FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 ```
+
+### Connectors JSON Metadata
+
+`config_json` stores connector-specific operational metadata. All connector types use the same top-level fields, but HTML/ICS adds feed-focused structures:
+
+- `validationMetadata` – Mirrors the API contract defined in `ConnectorValidationResult` (see `docs/architecture/rest-api-spec.md#/components/schemas/ConnectorValidationResult`). Includes `maskedUrl`, `previewEvents`, `lastSuccessfulFetchAt`, and `issues` so the portal can render previews without recomputing validation logic.
+- `fetchCache` – Persists conditional request headers for subsequent syncs. Fields:
+  - `etag` (`string|null`) – Last `ETag` header returned from the feed.
+  - `lastModified` (`string|null`) – Last `Last-Modified` header value.
+  - `fetchedAt` (`timestamptz|null`) – Timestamp of the most recent fetch that populated the cache.
+
+`last_successful_fetch_at` on the `connectors` table captures the timestamp of the most recent job or validation that retrieved events successfully. It is nullable until the first successful run and surfaces directly in connector list responses.
 ```
 
-
+### Change Log
+| Date       | Version | Description                                                            | Author                |
+|------------|---------|------------------------------------------------------------------------|-----------------------|
+| 2025-09-23 | v0.2    | Added `last_successful_fetch_at` column and documented HTML/ICS metadata structures | Product Owner |
+| 2025-09-18 | v0.1    | Initial schema outline                                                 | Codex Architect (AI)  |
