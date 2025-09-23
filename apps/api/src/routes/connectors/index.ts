@@ -20,7 +20,8 @@ export async function connectorRoutes(fastify: FastifyInstance): Promise<void> {
         connectors: fastify.repos.connectors,
         calendars: fastify.repos.calendars,
         auditLogs: fastify.repos.auditLogs,
-        prisma: fastify.prisma
+        prisma: fastify.prisma,
+        fetchImpl: fetch
       });
 
       return reply.status(200).send({ connectors });
@@ -70,7 +71,8 @@ export async function connectorRoutes(fastify: FastifyInstance): Promise<void> {
             connectors: fastify.repos.connectors,
             calendars: fastify.repos.calendars,
             auditLogs: fastify.repos.auditLogs,
-            prisma: fastify.prisma
+            prisma: fastify.prisma,
+            fetchImpl: fetch
           }
         });
 

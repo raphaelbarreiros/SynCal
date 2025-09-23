@@ -12,12 +12,14 @@ import {
   ConnectorConfigSchema,
   ConnectorResponseSchema,
   CreateConnectorRequestSchema,
+  HtmlIcsConnectorMetadataSchema,
   OAuthContextResponseSchema,
   OAuthProviderSchema,
   StartOAuthRequestSchema,
   type ConnectorConfig,
   type ConnectorResponse,
   type CreateConnectorRequest,
+  type HtmlIcsConnectorMetadata,
   type OAuthContextResponse,
   type OAuthProvider as OAuthProviderCore,
   type StartOAuthResponse
@@ -38,6 +40,7 @@ import {
 } from '../lib/oauth.js';
 import type { ConnectorRegistry } from '../plugins/connectors.js';
 import type { AdminSession } from '../lib/session.js';
+import { validateConnectorConfiguration } from './connector-validation.js';
 
 const OAuthCallbackQuerySchema = z.object({
   code: z.string().optional(),
@@ -53,6 +56,7 @@ export interface ConnectorServiceDependencies {
   calendars: CalendarRepository;
   auditLogs: AuditLogRepository;
   prisma: PrismaClient;
+  fetchImpl?: typeof fetch;
 }
 
 function toJsonValue<T>(value: T): Prisma.JsonValue {
@@ -341,6 +345,16 @@ async function queueConnectorValidationJob(
   });
 }
 
+type OAuthCreateConnectorRequest = Extract<
+  CreateConnectorRequest,
+  { type: 'google' | 'microsoft' }
+>;
+
+type HtmlIcsCreateConnectorRequest = Extract<
+  CreateConnectorRequest,
+  { type: 'html_ics' }
+>;
+
 export async function createConnector({
   body,
   session,
@@ -348,9 +362,39 @@ export async function createConnector({
   deps
 }: CreateConnectorOptions): Promise<ConnectorResponse> {
   const parsed = CreateConnectorRequestSchema.parse(body);
-  const provider = parsed.type as OAuthProvider;
 
-  const entry = consumeOAuthSession(session, parsed.state);
+  if (parsed.type === 'html_ics') {
+    return createHtmlIcsConnector({
+      request: parsed,
+      admin,
+      deps
+    });
+  }
+
+  return createOAuthConnector({
+    request: parsed,
+    session,
+    admin,
+    deps
+  });
+}
+
+interface CreateOAuthConnectorParams {
+  request: OAuthCreateConnectorRequest;
+  session: FastifySessionObject;
+  admin: AdminSession;
+  deps: ConnectorServiceDependencies;
+}
+
+async function createOAuthConnector({
+  request,
+  session,
+  admin,
+  deps
+}: CreateOAuthConnectorParams): Promise<ConnectorResponse> {
+  const provider = request.type as OAuthProvider;
+
+  const entry = consumeOAuthSession(session, request.state);
   if (!entry || !entry.payload) {
     throw new Error('OAuth state has not been authorized or has expired');
   }
@@ -361,7 +405,7 @@ export async function createConnector({
 
   const payload = entry.payload;
   const adapter = deps.connectorRegistry.getAdapter(provider);
-  const selectedIds = new Set(parsed.selectedCalendars.map((item) => item.providerCalendarId));
+  const selectedIds = new Set(request.selectedCalendars.map((item) => item.providerCalendarId));
 
   const calendarMap = new Map(payload.calendars.map((calendar) => [calendar.id, calendar]));
   const missing = Array.from(selectedIds).filter((id) => !calendarMap.has(id));
@@ -386,7 +430,7 @@ export async function createConnector({
   let lastValidatedAt: Date | null = null;
 
   const baseConfig = toConnectorConfig(
-    parsed.type,
+    request.type,
     payload,
     entry.scopes,
     Array.from(selectedIds)
@@ -396,7 +440,7 @@ export async function createConnector({
   const connector = await deps.connectors.create({
     ownerId: admin.id,
     type: provider,
-    displayName: parsed.displayName ?? payload.profile?.name ?? null,
+    displayName: request.displayName ?? payload.profile?.name ?? null,
     credentialsEncrypted: encryptedCredentials,
     config: baseConfigJson,
     status,
@@ -404,7 +448,7 @@ export async function createConnector({
   });
 
   const calendars = await deps.calendars.upsertMany(
-    parsed.selectedCalendars.map((selection) => {
+    request.selectedCalendars.map((selection) => {
       const calendar = calendarMap.get(selection.providerCalendarId)!;
       const metadata = toJsonValue({
         raw: calendar.raw ?? null,
@@ -449,11 +493,11 @@ export async function createConnector({
       error: error instanceof Error ? error.message : 'Unknown validation error'
     };
     status = 'pending_validation';
-      lastValidatedAt = null;
+    lastValidatedAt = null;
   }
 
   const updatedConfig = toConnectorConfig(
-    parsed.type,
+    request.type,
     payload,
     entry.scopes,
     Array.from(selectedIds),
@@ -479,11 +523,6 @@ export async function createConnector({
     }
   });
 
-  const responsePayload = {
-    ...updatedConnector,
-    calendars
-  };
-
   const parsedConfig = ConnectorConfigSchema.safeParse(updatedConnector.configJson);
 
   await queueConnectorValidationJob(
@@ -494,11 +533,11 @@ export async function createConnector({
   );
 
   return ConnectorResponseSchema.parse({
-    id: responsePayload.id,
-    type: responsePayload.type,
-    displayName: responsePayload.displayName,
-    status: responsePayload.status,
-    lastValidatedAt: responsePayload.lastValidatedAt?.toISOString() ?? null,
+    id: updatedConnector.id,
+    type: updatedConnector.type,
+    displayName: updatedConnector.displayName,
+    status: updatedConnector.status,
+    lastValidatedAt: updatedConnector.lastValidatedAt?.toISOString() ?? null,
     calendars: calendars.map((calendar) => ({
       id: calendar.id,
       providerCalendarId: calendar.providerCalendarId,
@@ -507,8 +546,107 @@ export async function createConnector({
       metadata: calendar.metadata as Record<string, unknown>
     })),
     config: parsedConfig.success ? parsedConfig.data : undefined,
-    createdAt: responsePayload.createdAt.toISOString(),
-    updatedAt: responsePayload.updatedAt.toISOString()
+    createdAt: updatedConnector.createdAt.toISOString(),
+    updatedAt: updatedConnector.updatedAt.toISOString()
+  });
+}
+
+interface CreateHtmlIcsConnectorParams {
+  request: HtmlIcsCreateConnectorRequest;
+  admin: AdminSession;
+  deps: ConnectorServiceDependencies;
+}
+
+async function createHtmlIcsConnector({
+  request,
+  admin,
+  deps
+}: CreateHtmlIcsConnectorParams): Promise<ConnectorResponse> {
+  const now = new Date();
+  const validation = await validateConnectorConfiguration(
+    {
+      type: 'html_ics',
+      config: request.config
+    },
+    {
+      fetch: deps.fetchImpl ?? fetch
+    }
+  );
+
+  const status: ConnectorResponse['status'] =
+    validation.status === 'ok' ? 'validated' : 'pending_validation';
+  const lastValidatedAt = status === 'validated' ? now : null;
+  const lastSuccessfulFetchAt =
+    validation.status === 'ok'
+      ? validation.lastSuccessfulFetchAt ?? now.toISOString()
+      : null;
+
+  const metadata = HtmlIcsConnectorMetadataSchema.parse({
+    targetCalendarLabel: request.config.targetCalendarLabel,
+    maskedUrl: validation.maskedUrl,
+    previewEvents: validation.previewEvents ?? [],
+    lastSuccessfulFetchAt,
+    validationIssues: validation.issues,
+    validationStatus: validation.status
+  });
+
+  const connector = await deps.connectors.create({
+    ownerId: admin.id,
+    type: 'html_ics',
+    displayName: request.displayName ?? request.config.targetCalendarLabel,
+    credentialsEncrypted: encryptJson({
+      feedUrl: request.config.feedUrl,
+      authHeader: request.config.authHeader ?? null,
+      authToken: request.config.authToken ?? null
+    }),
+    config: toJsonValue(metadata) as Prisma.InputJsonValue,
+    status,
+    lastValidatedAt
+  });
+
+  const calendars = await deps.calendars.upsertMany([
+    {
+      connectorId: connector.id,
+      providerCalendarId: request.config.feedUrl,
+      displayName: request.config.targetCalendarLabel,
+      privacyMode: 'original_title',
+      metadata: toJsonValue({
+        targetCalendarLabel: request.config.targetCalendarLabel
+      }) as Prisma.InputJsonValue
+    }
+  ]);
+
+  await deps.auditLogs.create({
+    actorId: admin.id,
+    action: 'connector.created',
+    entityType: 'connector',
+    entityId: connector.id,
+    metadata: {
+      provider: 'html_ics',
+      calendarCount: calendars.length,
+      validationStatus: validation.status
+    }
+  });
+
+  return ConnectorResponseSchema.parse({
+    id: connector.id,
+    type: connector.type,
+    displayName: connector.displayName,
+    status: connector.status,
+    lastValidatedAt: connector.lastValidatedAt?.toISOString() ?? null,
+    lastSuccessfulFetchAt: metadata.lastSuccessfulFetchAt ?? null,
+    maskedUrl: metadata.maskedUrl,
+    previewEvents: metadata.previewEvents,
+    targetCalendarLabel: metadata.targetCalendarLabel,
+    calendars: calendars.map((calendar) => ({
+      id: calendar.id,
+      providerCalendarId: calendar.providerCalendarId,
+      displayName: calendar.displayName,
+      privacyMode: calendar.privacyMode,
+      metadata: calendar.metadata as Record<string, unknown>
+    })),
+    createdAt: connector.createdAt.toISOString(),
+    updatedAt: connector.updatedAt.toISOString()
   });
 }
 
@@ -523,9 +661,18 @@ export async function listConnectors(
       const calendars = await deps.calendars.listByConnector(connector.id);
 
       let config: ConnectorConfig | undefined;
-      const parsedConfig = ConnectorConfigSchema.safeParse(connector.configJson);
-      if (parsedConfig.success) {
-        config = parsedConfig.data;
+      let htmlMetadata: HtmlIcsConnectorMetadata | undefined;
+
+      if (connector.type === 'html_ics') {
+        const parsedHtml = HtmlIcsConnectorMetadataSchema.safeParse(connector.configJson);
+        if (parsedHtml.success) {
+          htmlMetadata = parsedHtml.data;
+        }
+      } else {
+        const parsedConfig = ConnectorConfigSchema.safeParse(connector.configJson);
+        if (parsedConfig.success) {
+          config = parsedConfig.data;
+        }
       }
 
       return ConnectorResponseSchema.parse({
@@ -534,6 +681,12 @@ export async function listConnectors(
         displayName: connector.displayName,
         status: connector.status,
         lastValidatedAt: connector.lastValidatedAt?.toISOString() ?? null,
+        lastSuccessfulFetchAt: htmlMetadata
+          ? htmlMetadata.lastSuccessfulFetchAt ?? null
+          : undefined,
+        maskedUrl: htmlMetadata?.maskedUrl,
+        previewEvents: htmlMetadata?.previewEvents,
+        targetCalendarLabel: htmlMetadata?.targetCalendarLabel,
         calendars: calendars.map((calendar) => ({
           id: calendar.id,
           providerCalendarId: calendar.providerCalendarId,

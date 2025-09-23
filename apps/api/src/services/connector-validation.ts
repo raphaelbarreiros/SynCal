@@ -257,7 +257,7 @@ function toIsoDate(value: string, params: Record<string, string>): { iso: string
     return null;
   }
 
-  const [, yearStr, monthStr, dayStr, hourStr, minuteStr, secondStr] = match;
+  const [, yearStr, monthStr, dayStr, hourStr, minuteStr, secondStr, utcFlag] = match;
   const year = Number(yearStr);
   const month = Number(monthStr);
   const day = Number(dayStr);
@@ -269,11 +269,86 @@ function toIsoDate(value: string, params: Record<string, string>): { iso: string
     return null;
   }
 
-  const timestamp = Date.UTC(year, month - 1, day, hour, minute, second);
-  const iso = new Date(timestamp).toISOString();
   const allDay = params.VALUE === 'DATE' || !hourStr;
 
-  return { iso, allDay };
+  if (allDay) {
+    const date = new Date(Date.UTC(year, month - 1, day, 0, 0, 0));
+    return { iso: date.toISOString(), allDay: true };
+  }
+
+  const baseUtc = Date.UTC(year, month - 1, day, hour, minute, second);
+
+  if (utcFlag === 'Z') {
+    return { iso: new Date(baseUtc).toISOString(), allDay: false };
+  }
+
+  const timeZone = params.TZID;
+  if (timeZone) {
+    const zoned = zonedTimeToUtc(baseUtc, timeZone);
+    if (zoned) {
+      return { iso: zoned.toISOString(), allDay: false };
+    }
+  }
+
+  return { iso: new Date(baseUtc).toISOString(), allDay: false };
+}
+
+function zonedTimeToUtc(utcEstimate: number, timeZone: string): Date | null {
+  const date = new Date(utcEstimate);
+  const offset = getTimeZoneOffset(date, timeZone);
+  if (offset === null) {
+    return null;
+  }
+
+  return new Date(utcEstimate - offset);
+}
+
+function getTimeZoneOffset(date: Date, timeZone: string): number | null {
+  try {
+    const formatter = new Intl.DateTimeFormat('en-US', {
+      timeZone,
+      hour12: false,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit'
+    });
+
+    const parts = formatter.formatToParts(date);
+    const values: Record<string, number> = {};
+    for (const part of parts) {
+      if (part.type === 'literal') {
+        continue;
+      }
+      values[part.type] = Number(part.value);
+    }
+
+    if (
+      values.year === undefined ||
+      values.month === undefined ||
+      values.day === undefined ||
+      values.hour === undefined ||
+      values.minute === undefined ||
+      values.second === undefined
+    ) {
+      return null;
+    }
+
+    const asUtc = Date.UTC(
+      values.year,
+      values.month - 1,
+      values.day,
+      values.hour,
+      values.minute,
+      values.second
+    );
+
+    return asUtc - date.getTime();
+  } catch {
+    return null;
+  }
 }
 
 function selectUpcoming(events: IcsEventPreview[], limit: number): IcsEventPreview[] {

@@ -46,6 +46,29 @@ describe('validateConnectorConfiguration', () => {
     expect(result.issues[0].code).toBe('HTTP_401');
   });
 
+  it('resolves timezone offsets when TZID is provided', async () => {
+    const fetchMock = vi.fn(async () =>
+      new Response(
+        `BEGIN:VCALENDAR\nVERSION:2.0\nBEGIN:VEVENT\nUID:tz1\nDTSTART;TZID=America/New_York:20260101T100000\nSUMMARY:Tz Event\nEND:VEVENT\nEND:VCALENDAR`,
+        { status: 200 }
+      )
+    );
+
+    const result = await validateConnectorConfiguration(
+      {
+        type: 'html_ics',
+        config: {
+          feedUrl: 'https://calendar.example.com/tz.ics',
+          targetCalendarLabel: 'Ops Calendar'
+        }
+      },
+      { fetch: fetchMock }
+    );
+
+    expect(result.status).toBe('ok');
+    expect(result.previewEvents?.[0]?.startsAt).toBe('2026-01-01T15:00:00.000Z');
+  });
+
   it('treats abort errors as timeout issues', async () => {
     const fetchMock = vi.fn(async () => {
       const error = new Error('Aborted');
