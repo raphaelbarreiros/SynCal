@@ -13,12 +13,14 @@ export interface CreateConnectorInput {
   config: Prisma.InputJsonValue;
   status?: ConnectorStatus;
   lastValidatedAt?: Date | null;
+  lastSuccessfulFetchAt?: Date | null;
 }
 
 export interface UpdateConnectorValidationInput {
   id: string;
   status: ConnectorStatus;
   lastValidatedAt?: Date | null;
+  lastSuccessfulFetchAt?: Date | null;
   config?: Prisma.InputJsonValue;
 }
 
@@ -34,7 +36,8 @@ export class ConnectorRepository {
         status: input.status ?? 'pending_validation',
         credentialsEncrypted: input.credentialsEncrypted,
         configJson: input.config,
-        lastValidatedAt: input.lastValidatedAt ?? null
+        lastValidatedAt: input.lastValidatedAt ?? null,
+        lastSuccessfulFetchAt: input.lastSuccessfulFetchAt ?? null
       }
     });
   }
@@ -58,6 +61,8 @@ export class ConnectorRepository {
       data: {
         status: input.status,
         lastValidatedAt: input.lastValidatedAt ?? null,
+        lastSuccessfulFetchAt:
+          input.lastSuccessfulFetchAt !== undefined ? input.lastSuccessfulFetchAt : undefined,
         configJson: input.config ?? undefined
       }
     });

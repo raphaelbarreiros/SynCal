@@ -1,3 +1,5 @@
+import { maskFeedUrl as maskFeedUrlInternal } from '@syncal/connectors';
+
 export function maskEmail(email: string): string {
   const [local, domain] = email.split('@');
   if (!domain) {
@@ -13,16 +15,4 @@ export function maskEmail(email: string): string {
   return `${visible}${'*'.repeat(obscuredLength)}@${domain}`;
 }
 
-export function maskFeedUrl(rawUrl: string): string {
-  try {
-    const url = new URL(rawUrl);
-    const segments = url.pathname.split('/').filter(Boolean);
-    const last = segments.pop();
-
-    const path = last ? `/…/${last}` : '/…';
-
-    return `${url.protocol}//${url.host}${path}`;
-  } catch {
-    return 'https://…';
-  }
-}
+export const maskFeedUrl = maskFeedUrlInternal;

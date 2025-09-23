@@ -10,7 +10,7 @@ import type {
   SyncPair
 } from '@prisma/client';
 import type { ConnectorAdapter } from '@syncal/connectors';
-import type { ConnectorRegistry } from '../../src/plugins/connectors.js';
+import type { ConnectorRegistry } from '@syncal/connectors';
 import {
   createConnector,
   handleOAuthCallback,
@@ -115,12 +115,19 @@ function createContext(): TestContext {
         credentialsEncrypted: input.credentialsEncrypted,
         configJson: input.config,
         lastValidatedAt: input.lastValidatedAt ?? null,
+        lastSuccessfulFetchAt: input.lastSuccessfulFetchAt ?? null,
         createdAt: now,
         updatedAt: now
       } satisfies Connector;
       return storedConnector;
     }),
-    updateValidation: vi.fn(async ({ id, status, lastValidatedAt, config }) => {
+    updateValidation: vi.fn(async ({
+      id,
+      status,
+      lastValidatedAt,
+      lastSuccessfulFetchAt,
+      config
+    }) => {
       if (!storedConnector || storedConnector.id !== id) {
         throw new Error('Connector not created');
       }
@@ -129,6 +136,8 @@ function createContext(): TestContext {
         ...storedConnector,
         status,
         lastValidatedAt: lastValidatedAt ?? null,
+        lastSuccessfulFetchAt:
+          lastSuccessfulFetchAt !== undefined ? lastSuccessfulFetchAt : storedConnector.lastSuccessfulFetchAt,
         configJson: config ?? storedConnector.configJson,
         updatedAt: now
       };

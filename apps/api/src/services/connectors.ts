@@ -4,6 +4,7 @@ import {
   buildGoogleAuthorizationUrl,
   buildMicrosoftAuthorizationUrl,
   createPkcePair,
+  type ConnectorAdapter,
   type OAuthCallbackPayload,
   type OAuthProvider
 } from '@syncal/connectors';
@@ -38,7 +39,7 @@ import {
   saveOAuthRequest,
   storeOAuthCallback
 } from '../lib/oauth.js';
-import type { ConnectorRegistry } from '../plugins/connectors.js';
+import type { ConnectorRegistry } from '@syncal/connectors';
 import type { AdminSession } from '../lib/session.js';
 import { validateConnectorConfiguration } from './connector-validation.js';
 
@@ -71,6 +72,19 @@ function getScopesForProvider(env: AppEnv, provider: OAuthProvider): string[] {
     .split(/\s+/)
     .map((scope) => scope.trim())
     .filter(Boolean);
+}
+
+function assertOAuthAdapter(
+  adapter: ConnectorAdapter,
+  provider: OAuthProvider
+): asserts adapter is ConnectorAdapter & {
+  exchangeCode: NonNullable<ConnectorAdapter['exchangeCode']>;
+  listCalendars: NonNullable<ConnectorAdapter['listCalendars']>;
+  fetchUpcomingEvents: NonNullable<ConnectorAdapter['fetchUpcomingEvents']>;
+} {
+  if (!adapter.exchangeCode || !adapter.listCalendars || !adapter.fetchUpcomingEvents) {
+    throw new Error(`Adapter for ${provider} does not support OAuth workflows`);
+  }
 }
 
 interface GoogleCredentials {
@@ -209,6 +223,7 @@ export async function handleOAuthCallback(
   }
 
   const adapter = deps.connectorRegistry.getAdapter(provider);
+  assertOAuthAdapter(adapter, provider);
   const env = deps.env;
   const scopes = entry.scopes;
 
@@ -405,6 +420,7 @@ async function createOAuthConnector({
 
   const payload = entry.payload;
   const adapter = deps.connectorRegistry.getAdapter(provider);
+  assertOAuthAdapter(adapter, provider);
   const selectedIds = new Set(request.selectedCalendars.map((item) => item.providerCalendarId));
 
   const calendarMap = new Map(payload.calendars.map((calendar) => [calendar.id, calendar]));
@@ -576,7 +592,7 @@ async function createHtmlIcsConnector({
   const status: ConnectorResponse['status'] =
     validation.status === 'ok' ? 'validated' : 'pending_validation';
   const lastValidatedAt = status === 'validated' ? now : null;
-  const lastSuccessfulFetchAt =
+  const lastSuccessfulFetchAtIso =
     validation.status === 'ok'
       ? validation.lastSuccessfulFetchAt ?? now.toISOString()
       : null;
@@ -585,7 +601,7 @@ async function createHtmlIcsConnector({
     targetCalendarLabel: request.config.targetCalendarLabel,
     maskedUrl: validation.maskedUrl,
     previewEvents: validation.previewEvents ?? [],
-    lastSuccessfulFetchAt,
+    lastSuccessfulFetchAt: lastSuccessfulFetchAtIso,
     validationIssues: validation.issues,
     validationStatus: validation.status
   });
@@ -601,7 +617,8 @@ async function createHtmlIcsConnector({
     }),
     config: toJsonValue(metadata) as Prisma.InputJsonValue,
     status,
-    lastValidatedAt
+    lastValidatedAt,
+    lastSuccessfulFetchAt: lastSuccessfulFetchAtIso ? new Date(lastSuccessfulFetchAtIso) : null
   });
 
   const calendars = await deps.calendars.upsertMany([
@@ -634,7 +651,7 @@ async function createHtmlIcsConnector({
     displayName: connector.displayName,
     status: connector.status,
     lastValidatedAt: connector.lastValidatedAt?.toISOString() ?? null,
-    lastSuccessfulFetchAt: metadata.lastSuccessfulFetchAt ?? null,
+    lastSuccessfulFetchAt: connector.lastSuccessfulFetchAt?.toISOString() ?? null,
     maskedUrl: metadata.maskedUrl,
     previewEvents: metadata.previewEvents,
     targetCalendarLabel: metadata.targetCalendarLabel,
@@ -675,15 +692,16 @@ export async function listConnectors(
         }
       }
 
+      const lastSuccessfulFetchAtIso = connector.lastSuccessfulFetchAt?.toISOString() ?? null;
+
       return ConnectorResponseSchema.parse({
         id: connector.id,
         type: connector.type,
         displayName: connector.displayName,
         status: connector.status,
         lastValidatedAt: connector.lastValidatedAt?.toISOString() ?? null,
-        lastSuccessfulFetchAt: htmlMetadata
-          ? htmlMetadata.lastSuccessfulFetchAt ?? null
-          : undefined,
+        lastSuccessfulFetchAt:
+          connector.type === 'html_ics' ? lastSuccessfulFetchAtIso : undefined,
         maskedUrl: htmlMetadata?.maskedUrl,
         previewEvents: htmlMetadata?.previewEvents,
         targetCalendarLabel: htmlMetadata?.targetCalendarLabel,

@@ -50,6 +50,7 @@ describe('createConnector – HTML/ICS', () => {
         credentialsEncrypted: input.credentialsEncrypted,
         configJson: input.config,
         lastValidatedAt: input.lastValidatedAt ?? null,
+        lastSuccessfulFetchAt: input.lastSuccessfulFetchAt ?? null,
         createdAt: now,
         updatedAt: now
       }) satisfies Connector),

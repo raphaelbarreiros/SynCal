@@ -58,4 +58,26 @@ describe('deriveConnectorSubmissionFeedback', () => {
       'Validation failed: Calendar fetch failed. Check OAuth credentials, ensure the selected calendars remain accessible, and retry validation from the connectors table.'
     );
   });
+
+  it('returns a descriptive message for validated HTML/ICS connectors', () => {
+    const connector = buildConnector({
+      type: 'html_ics',
+      status: 'validated',
+      targetCalendarLabel: 'Ops Calendar',
+      maskedUrl: 'https://calendar.example.com/…/feed.ics',
+      previewEvents: [
+        {
+          uid: 'evt-1',
+          summary: 'Standup',
+          startsAt: '2026-01-01T14:00:00.000Z',
+          allDay: false
+        }
+      ]
+    });
+
+    const result = deriveConnectorSubmissionFeedback(connector);
+
+    expect(result.successMessage).toBe('Connector Ops Calendar feed validated. 1 previewed event available.');
+    expect(result.errorMessage).toBeUndefined();
+  });
 });
