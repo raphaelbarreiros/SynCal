@@ -42,11 +42,12 @@ export function createHtmlIcsSyncExecutor(options: HtmlIcsSyncExecutorOptions = 
   return async (job, context) => {
     const payload = job.payload as Record<string, unknown> | null;
     if (!payload || payload['type'] !== 'html_ics_sync') {
-      context.logger.warn({ payload }, 'Skipping job without html_ics_sync payload');
+      context.logger.error({ payload, jobId: job.id }, 'Unsupported payload for html_ics_sync executor');
       return {
-        outcome: 'success',
+        outcome: 'failure',
         processedEvents: 0,
-        failedEvents: 0
+        failedEvents: 0,
+        errorSummary: 'Unsupported payload for html_ics_sync executor'
       } satisfies JobExecutionResult;
     }
 

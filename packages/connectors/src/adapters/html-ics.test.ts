@@ -202,7 +202,7 @@ describe('createHtmlIcsAdapter', () => {
     expect(result.issues[0].code).toBe('PARSE_ERROR');
   });
 
-  it('resolves timezone data and expands recurrence rules', async () => {
+  it('expands multi-day recurrence rules with BYDAY', async () => {
     const fetchMock = vi.fn(async () =>
       new Response(
         [
@@ -210,10 +210,10 @@ describe('createHtmlIcsAdapter', () => {
           'VERSION:2.0',
           'BEGIN:VEVENT',
           'UID:recurring',
-          'DTSTART;TZID=America/New_York:20260101T090000',
-          'DTEND;TZID=America/New_York:20260101T093000',
-          'RRULE:FREQ=DAILY;COUNT=3',
-          'SUMMARY:Daily Standup',
+          'DTSTART;TZID=America/New_York:20260105T090000',
+          'DTEND;TZID=America/New_York:20260105T093000',
+          'RRULE:FREQ=WEEKLY;BYDAY=MO,WE,FR;COUNT=6',
+          'SUMMARY:Ops Rotation',
           'END:VEVENT',
           'END:VCALENDAR'
         ].join('\n'),
@@ -228,9 +228,43 @@ describe('createHtmlIcsAdapter', () => {
     });
 
     expect(result.status).toBe('ok');
-    expect(result.previewEvents).toHaveLength(3);
-    expect(result.previewEvents?.[0]?.startsAt).toBe('2026-01-01T14:00:00.000Z');
-    expect(result.previewEvents?.[1]?.startsAt).toBe('2026-01-02T14:00:00.000Z');
-    expect(result.previewEvents?.[0]?.endsAt).toBe('2026-01-01T14:30:00.000Z');
+    expect(result.previewEvents).toHaveLength(5);
+    const starts = result.previewEvents?.map((event) => event.startsAt);
+    expect(starts?.slice(0, 3)).toEqual([
+      '2026-01-05T14:00:00.000Z',
+      '2026-01-07T14:00:00.000Z',
+      '2026-01-09T14:00:00.000Z'
+    ]);
+  });
+
+  it('resolves timezone aliases using bundled definitions', async () => {
+    const fetchMock = vi.fn(async () =>
+      new Response(
+        [
+          'BEGIN:VCALENDAR',
+          'VERSION:2.0',
+          'BEGIN:VEVENT',
+          'UID:alias',
+          'DTSTART;TZID=US/Eastern:20260110T120000',
+          'DTEND;TZID=US/Eastern:20260110T130000',
+          'SUMMARY:Alias Meeting',
+          'END:VEVENT',
+          'END:VCALENDAR'
+        ].join('\n'),
+        { status: 200 }
+      )
+    );
+
+    const adapter = createHtmlIcsAdapter({ fetch: fetchMock, now: () => NOW });
+    const result = await adapter.validate({
+      feedUrl: 'https://calendar.example.com/alias.ics',
+      targetCalendarLabel: 'Ops'
+    });
+
+    expect(result.status).toBe('ok');
+    expect(result.previewEvents?.[0]).toMatchObject({
+      startsAt: '2026-01-10T17:00:00.000Z',
+      endsAt: '2026-01-10T18:00:00.000Z'
+    });
   });
 });
