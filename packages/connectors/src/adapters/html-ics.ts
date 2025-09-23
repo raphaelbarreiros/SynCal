@@ -3,6 +3,7 @@ import {
   ConnectorValidationResultSchema,
   type ConnectorValidationResult,
   type HtmlIcsConnectorConfig,
+  type HtmlIcsFetchCache,
   type ValidationIssue
 } from '@syncal/core';
 import { HtmlIcsAdapterOptions, type ConnectorAdapter } from '../types.js';
@@ -74,57 +75,82 @@ export function createHtmlIcsAdapter(options: HtmlIcsAdapterOptions = {}): Conne
   const fetchImpl = options.fetch ?? fetch;
   const timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
   const nowFactory = options.now ?? (() => new Date());
+  const cache = options.cache ?? undefined;
 
   return {
     provider: 'html_ics',
     async validate(config: HtmlIcsConnectorConfig): Promise<ConnectorValidationResult> {
-      const maskedUrl = maskFeedUrl(config.feedUrl);
-
-      try {
-        const feed = await fetchFeed(config, { fetch: fetchImpl, timeoutMs });
-        const events = parseIcsEvents(feed);
-        const now = nowFactory();
-        const occurrences = collectUpcomingOccurrences(events, now, MAX_PREVIEW_EVENTS);
-
-        const issues: ValidationIssue[] =
-          occurrences.length === 0
-            ? [
-                {
-                  code: 'NO_UPCOMING_EVENTS',
-                  message: 'Feed fetched successfully but no upcoming events were found.',
-                  severity: 'warning'
-                }
-              ]
-            : [];
-
-        return ConnectorValidationResultSchema.parse({
-          status: 'ok',
-          maskedUrl,
-          previewEvents: occurrences.map((occurrence) => ({
-            uid: occurrence.uid,
-            summary: occurrence.summary,
-            startsAt: occurrence.start.toISOString(),
-            endsAt: occurrence.end?.toISOString(),
-            allDay: occurrence.allDay
-          })),
-          lastSuccessfulFetchAt: now.toISOString(),
-          issues
-        });
-      } catch (error) {
-        return ConnectorValidationResultSchema.parse({
-          status: 'failed',
-          maskedUrl,
-          issues: mapErrorToIssues(error)
-        });
-      }
+      return validateHtmlIcsFeed(config, {
+        fetch: fetchImpl,
+        timeoutMs,
+        nowFactory,
+        cache
+      });
     }
   } satisfies ConnectorAdapter;
 }
 
+interface ValidateFeedDependencies extends FetchDependencies {
+  nowFactory: () => Date;
+  cache?: HtmlIcsFetchCache;
+}
+
+export async function validateHtmlIcsFeed(
+  config: HtmlIcsConnectorConfig,
+  deps: ValidateFeedDependencies
+): Promise<ConnectorValidationResult> {
+  const maskedUrl = maskFeedUrl(config.feedUrl);
+
+  try {
+    const feed = await fetchFeed(config, deps, deps.cache);
+    const events = parseIcsEvents(feed.body);
+    const now = deps.nowFactory();
+    const occurrences = collectUpcomingOccurrences(events, now, MAX_PREVIEW_EVENTS);
+
+    const issues: ValidationIssue[] =
+      occurrences.length === 0
+        ? [
+            {
+              code: 'NO_UPCOMING_EVENTS',
+              message: 'Feed fetched successfully but no upcoming events were found.',
+              severity: 'warning'
+            }
+          ]
+        : [];
+
+    return ConnectorValidationResultSchema.parse({
+      status: 'ok',
+      maskedUrl,
+      previewEvents: occurrences.map((occurrence) => ({
+        uid: occurrence.uid,
+        summary: occurrence.summary,
+        startsAt: occurrence.start.toISOString(),
+        endsAt: occurrence.end?.toISOString(),
+        allDay: occurrence.allDay
+      })),
+      lastSuccessfulFetchAt: now.toISOString(),
+      issues,
+      cacheMetadata: feed.cacheMetadata
+    });
+  } catch (error) {
+    return ConnectorValidationResultSchema.parse({
+      status: 'failed',
+      maskedUrl,
+      issues: mapErrorToIssues(error)
+    });
+  }
+}
+
+interface FetchFeedResult {
+  body: string;
+  cacheMetadata?: HtmlIcsFetchCache;
+}
+
 async function fetchFeed(
   config: HtmlIcsConnectorConfig,
-  deps: FetchDependencies
-): Promise<string> {
+  deps: FetchDependencies,
+  cache?: HtmlIcsFetchCache
+): Promise<FetchFeedResult> {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), deps.timeoutMs);
 
@@ -135,6 +161,14 @@ async function fetchFeed(
 
     if (config.authHeader && config.authToken) {
       headers[config.authHeader] = config.authToken;
+    }
+
+    if (cache?.etag) {
+      headers['If-None-Match'] = cache.etag;
+    }
+
+    if (cache?.lastModified) {
+      headers['If-Modified-Since'] = cache.lastModified;
     }
 
     const response = await deps.fetch(config.feedUrl, {
@@ -152,8 +186,19 @@ async function fetchFeed(
     if (!body.trim()) {
       throw new ParseError('Feed response was empty.');
     }
+    const etag = response.headers.get('etag') ?? undefined;
+    const lastModified = response.headers.get('last-modified') ?? undefined;
 
-    return body;
+    return {
+      body,
+      cacheMetadata:
+        etag || lastModified
+          ? {
+              ...(etag ? { etag } : {}),
+              ...(lastModified ? { lastModified } : {})
+            }
+          : undefined
+    } satisfies FetchFeedResult;
   } catch (error) {
     if (error instanceof HttpError) {
       throw error;

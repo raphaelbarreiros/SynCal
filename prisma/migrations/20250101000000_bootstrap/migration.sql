@@ -9,15 +9,15 @@ CREATE TYPE "SyncJobOutcome" AS ENUM ('success', 'partial', 'failure');
 CREATE TYPE "AlertSeverity" AS ENUM ('info', 'warning', 'critical');
 
 CREATE TABLE "admin_users" (
-  "id" UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  "email" CITEXT UNIQUE NOT NULL,
+  "id" UUID PRIMARY KEY DEFAULT public.uuid_generate_v4(),
+  "email" public.CITEXT UNIQUE NOT NULL,
   "password_hash" TEXT NOT NULL,
   "created_at" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   "updated_at" TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 CREATE TABLE "connectors" (
-  "id" UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  "id" UUID PRIMARY KEY DEFAULT public.uuid_generate_v4(),
   "owner_id" UUID NOT NULL REFERENCES "admin_users"("id") ON DELETE CASCADE,
   "type" "ConnectorType" NOT NULL,
   "display_name" TEXT,
@@ -31,7 +31,7 @@ CREATE TABLE "connectors" (
 CREATE INDEX "connectors_owner_idx" ON "connectors"("owner_id");
 
 CREATE TABLE "calendars" (
-  "id" UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  "id" UUID PRIMARY KEY DEFAULT public.uuid_generate_v4(),
   "connector_id" UUID NOT NULL REFERENCES "connectors"("id") ON DELETE CASCADE,
   "provider_calendar_id" TEXT NOT NULL,
   "display_name" TEXT,
@@ -44,7 +44,7 @@ CREATE TABLE "calendars" (
 CREATE INDEX "calendars_connector_idx" ON "calendars"("connector_id");
 
 CREATE TABLE "sync_pairs" (
-  "id" UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  "id" UUID PRIMARY KEY DEFAULT public.uuid_generate_v4(),
   "primary_calendar_id" UUID NOT NULL REFERENCES "calendars"("id") ON DELETE CASCADE,
   "secondary_calendar_id" UUID NOT NULL REFERENCES "calendars"("id") ON DELETE CASCADE,
   "fallback_order" UUID[] NOT NULL DEFAULT '{}',
@@ -56,7 +56,7 @@ CREATE TABLE "sync_pairs" (
 CREATE INDEX "sync_pairs_active_idx" ON "sync_pairs"("active");
 
 CREATE TABLE "sync_jobs" (
-  "id" UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  "id" UUID PRIMARY KEY DEFAULT public.uuid_generate_v4(),
   "pair_id" UUID NOT NULL REFERENCES "sync_pairs"("id") ON DELETE CASCADE,
   "connector_id" UUID NOT NULL REFERENCES "connectors"("id") ON DELETE CASCADE,
   "window_start" TIMESTAMPTZ NOT NULL,
@@ -75,7 +75,7 @@ CREATE INDEX "sync_jobs_lookup_idx" ON "sync_jobs"("status", "next_run_at");
 CREATE INDEX "sync_jobs_pair_idx" ON "sync_jobs"("pair_id");
 
 CREATE TABLE "sync_job_logs" (
-  "id" UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  "id" UUID PRIMARY KEY DEFAULT public.uuid_generate_v4(),
   "job_id" UUID NOT NULL REFERENCES "sync_jobs"("id") ON DELETE CASCADE,
   "pair_id" UUID NOT NULL REFERENCES "sync_pairs"("id") ON DELETE CASCADE,
   "connector_id" UUID NOT NULL REFERENCES "connectors"("id") ON DELETE CASCADE,
@@ -89,7 +89,7 @@ CREATE TABLE "sync_job_logs" (
 CREATE INDEX "sync_job_logs_job_idx" ON "sync_job_logs"("job_id");
 
 CREATE TABLE "event_mappings" (
-  "id" UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  "id" UUID PRIMARY KEY DEFAULT public.uuid_generate_v4(),
   "pair_id" UUID NOT NULL REFERENCES "sync_pairs"("id") ON DELETE CASCADE,
   "source_calendar_id" UUID NOT NULL REFERENCES "calendars"("id") ON DELETE CASCADE,
   "mirror_calendar_id" UUID NOT NULL REFERENCES "calendars"("id") ON DELETE CASCADE,
@@ -102,7 +102,7 @@ CREATE TABLE "event_mappings" (
 CREATE INDEX "event_mappings_pair_idx" ON "event_mappings"("pair_id");
 
 CREATE TABLE "audit_logs" (
-  "id" UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  "id" UUID PRIMARY KEY DEFAULT public.uuid_generate_v4(),
   "actor_id" UUID REFERENCES "admin_users"("id") ON DELETE SET NULL,
   "action" TEXT NOT NULL,
   "entity_type" TEXT,
@@ -114,7 +114,7 @@ CREATE INDEX "audit_logs_actor_idx" ON "audit_logs"("actor_id");
 CREATE INDEX "audit_logs_entity_idx" ON "audit_logs"("entity_type", "entity_id");
 
 CREATE TABLE "alerts" (
-  "id" UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  "id" UUID PRIMARY KEY DEFAULT public.uuid_generate_v4(),
   "pair_id" UUID REFERENCES "sync_pairs"("id") ON DELETE CASCADE,
   "connector_id" UUID REFERENCES "connectors"("id") ON DELETE CASCADE,
   "category" TEXT NOT NULL,

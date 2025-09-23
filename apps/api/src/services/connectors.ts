@@ -111,9 +111,9 @@ function requireGoogleCredentials(env: AppEnv): GoogleCredentials {
   }
 
   return {
-    clientId: env.GOOGLE_CLIENT_ID,
-    clientSecret: env.GOOGLE_CLIENT_SECRET,
-    redirectUri: env.GOOGLE_REDIRECT_URI
+    clientId: env.GOOGLE_CLIENT_ID!,
+    clientSecret: env.GOOGLE_CLIENT_SECRET!,
+    redirectUri: env.GOOGLE_REDIRECT_URI!
   };
 }
 
@@ -129,10 +129,10 @@ function requireMicrosoftCredentials(env: AppEnv): MicrosoftCredentials {
   }
 
   return {
-    clientId: env.MS_CLIENT_ID,
-    clientSecret: env.MS_CLIENT_SECRET,
-    redirectUri: env.MS_REDIRECT_URI,
-    tenantId: env.MS_TENANT_ID
+    clientId: env.MS_CLIENT_ID!,
+    clientSecret: env.MS_CLIENT_SECRET!,
+    redirectUri: env.MS_REDIRECT_URI!,
+    tenantId: env.MS_TENANT_ID!
   };
 }
 
@@ -355,6 +355,79 @@ async function queueConnectorValidationJob(
       windowStart,
       windowEnd,
       payload,
+      nextRunAt
+    }
+  });
+}
+
+async function queueHtmlIcsSyncJob(
+  prisma: PrismaClient,
+  connectorId: string,
+  calendarId: string,
+  referenceTime: Date
+): Promise<void> {
+  const pair = await prisma.syncPair.upsert({
+    where: {
+      primaryCalendarId_secondaryCalendarId: {
+        primaryCalendarId: calendarId,
+        secondaryCalendarId: calendarId
+      }
+    },
+    update: {},
+    create: {
+      primaryCalendarId: calendarId,
+      secondaryCalendarId: calendarId,
+      fallbackOrder: []
+    }
+  });
+
+  const payload: Prisma.JsonObject = {
+    type: 'html_ics_sync',
+    calendarId
+  };
+
+  const existingJob = await prisma.syncJob.findFirst({
+    where: {
+      connectorId,
+      pairId: pair.id,
+      status: {
+        in: ['pending', 'retrying', 'in_progress']
+      },
+      payload: {
+        path: ['type'],
+        equals: 'html_ics_sync'
+      }
+    }
+  });
+
+  const windowStart = referenceTime;
+  const windowEnd = new Date(referenceTime.getTime() + 2 * 60 * 60 * 1000);
+  const nextRunAt = referenceTime;
+
+  if (existingJob) {
+    await prisma.syncJob.update({
+      where: { id: existingJob.id },
+      data: {
+        windowStart,
+        windowEnd,
+        nextRunAt,
+        payload,
+        status: 'pending',
+        retryCount: 0,
+        lastError: null
+      }
+    });
+    return;
+  }
+
+  await prisma.syncJob.create({
+    data: {
+      pairId: pair.id,
+      connectorId,
+      windowStart,
+      windowEnd,
+      payload,
+      priority: 1,
       nextRunAt
     }
   });
@@ -599,11 +672,14 @@ async function createHtmlIcsConnector({
 
   const metadata = HtmlIcsConnectorMetadataSchema.parse({
     targetCalendarLabel: request.config.targetCalendarLabel,
-    maskedUrl: validation.maskedUrl,
-    previewEvents: validation.previewEvents ?? [],
-    lastSuccessfulFetchAt: lastSuccessfulFetchAtIso,
-    validationIssues: validation.issues,
-    validationStatus: validation.status
+    validationMetadata: {
+      status: validation.status,
+      maskedUrl: validation.maskedUrl,
+      previewEvents: validation.previewEvents ?? [],
+      lastSuccessfulFetchAt: lastSuccessfulFetchAtIso,
+      issues: validation.issues
+    },
+    fetchCache: validation.cacheMetadata ?? undefined
   });
 
   const connector = await deps.connectors.create({
@@ -618,7 +694,9 @@ async function createHtmlIcsConnector({
     config: toJsonValue(metadata) as Prisma.InputJsonValue,
     status,
     lastValidatedAt,
-    lastSuccessfulFetchAt: lastSuccessfulFetchAtIso ? new Date(lastSuccessfulFetchAtIso) : null
+    lastSuccessfulFetchAt: metadata.validationMetadata.lastSuccessfulFetchAt
+      ? new Date(metadata.validationMetadata.lastSuccessfulFetchAt)
+      : null
   });
 
   const calendars = await deps.calendars.upsertMany([
@@ -645,15 +723,20 @@ async function createHtmlIcsConnector({
     }
   });
 
+  if (calendars.length > 0) {
+    await queueHtmlIcsSyncJob(deps.prisma, connector.id, calendars[0]!.id, now);
+  }
+
   return ConnectorResponseSchema.parse({
     id: connector.id,
     type: connector.type,
     displayName: connector.displayName,
     status: connector.status,
     lastValidatedAt: connector.lastValidatedAt?.toISOString() ?? null,
-    lastSuccessfulFetchAt: connector.lastSuccessfulFetchAt?.toISOString() ?? null,
-    maskedUrl: metadata.maskedUrl,
-    previewEvents: metadata.previewEvents,
+    lastSuccessfulFetchAt: metadata.validationMetadata.lastSuccessfulFetchAt ?? null,
+    maskedUrl: metadata.validationMetadata.maskedUrl,
+    previewEvents: metadata.validationMetadata.previewEvents,
+    validationIssues: metadata.validationMetadata.issues,
     targetCalendarLabel: metadata.targetCalendarLabel,
     calendars: calendars.map((calendar) => ({
       id: calendar.id,
@@ -701,9 +784,12 @@ export async function listConnectors(
         status: connector.status,
         lastValidatedAt: connector.lastValidatedAt?.toISOString() ?? null,
         lastSuccessfulFetchAt:
-          connector.type === 'html_ics' ? lastSuccessfulFetchAtIso : undefined,
-        maskedUrl: htmlMetadata?.maskedUrl,
-        previewEvents: htmlMetadata?.previewEvents,
+          connector.type === 'html_ics'
+            ? htmlMetadata?.validationMetadata.lastSuccessfulFetchAt ?? lastSuccessfulFetchAtIso
+            : undefined,
+        maskedUrl: htmlMetadata?.validationMetadata.maskedUrl,
+        previewEvents: htmlMetadata?.validationMetadata.previewEvents,
+        validationIssues: htmlMetadata?.validationMetadata.issues,
         targetCalendarLabel: htmlMetadata?.targetCalendarLabel,
         calendars: calendars.map((calendar) => ({
           id: calendar.id,

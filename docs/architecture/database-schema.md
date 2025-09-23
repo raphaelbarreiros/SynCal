@@ -179,7 +179,7 @@ FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 - `fetchCache` – Persists conditional request headers for subsequent syncs. Fields:
   - `etag` (`string|null`) – Last `ETag` header returned from the feed.
   - `lastModified` (`string|null`) – Last `Last-Modified` header value.
-  - `fetchedAt` (`timestamptz|null`) – Timestamp of the most recent fetch that populated the cache.
+  - Additional attributes MAY be added for future cache controls; absent values indicate the provider does not support conditional headers.
 
 `last_successful_fetch_at` on the `connectors` table captures the timestamp of the most recent job or validation that retrieved events successfully. It is nullable until the first successful run and surfaces directly in connector list responses.
 ```
@@ -187,5 +187,6 @@ FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 ### Change Log
 | Date       | Version | Description                                                            | Author                |
 |------------|---------|------------------------------------------------------------------------|-----------------------|
+| 2025-09-23 | v0.3    | Documented `validationMetadata`/`fetchCache` structure for HTML/ICS connectors, clarified extension requirements for worker tests | Developer |
 | 2025-09-23 | v0.2    | Added `last_successful_fetch_at` column and documented HTML/ICS metadata structures | Product Owner |
 | 2025-09-18 | v0.1    | Initial schema outline                                                 | Codex Architect (AI)  |

@@ -156,6 +156,22 @@ export const ConnectorConfigSchema = z
   .passthrough();
 export type ConnectorConfig = z.infer<typeof ConnectorConfigSchema>;
 
+export const ValidationEventPreviewSchema = z.object({
+  uid: z.string(),
+  summary: z.string().optional(),
+  startsAt: z.string(),
+  endsAt: z.string().optional(),
+  allDay: z.boolean().default(false)
+});
+export type ValidationEventPreview = z.infer<typeof ValidationEventPreviewSchema>;
+
+export const ValidationIssueSchema = z.object({
+  code: z.string(),
+  message: z.string(),
+  severity: z.enum(['info', 'warning', 'error']).default('error')
+});
+export type ValidationIssue = z.infer<typeof ValidationIssueSchema>;
+
 export const ConnectorResponseSchema = z.object({
   id: z.string().uuid(),
   type: ConnectorTypeSchema,
@@ -177,6 +193,7 @@ export const ConnectorResponseSchema = z.object({
       })
     )
     .optional(),
+  validationIssues: z.array(ValidationIssueSchema).optional(),
   targetCalendarLabel: z.string().optional(),
   createdAt: z.string(),
   updatedAt: z.string()
@@ -188,29 +205,26 @@ export const ConnectorListResponseSchema = z.object({
 });
 export type ConnectorListResponse = z.infer<typeof ConnectorListResponseSchema>;
 
-export const ValidationEventPreviewSchema = z.object({
-  uid: z.string(),
-  summary: z.string().optional(),
-  startsAt: z.string(),
-  endsAt: z.string().optional(),
-  allDay: z.boolean().default(false)
+const HtmlIcsFetchCacheBaseSchema = z.object({
+  etag: z.string().min(1).optional(),
+  lastModified: z.string().min(1).optional()
 });
-export type ValidationEventPreview = z.infer<typeof ValidationEventPreviewSchema>;
+export const HtmlIcsFetchCacheSchema = HtmlIcsFetchCacheBaseSchema.optional();
+export type HtmlIcsFetchCache = z.infer<typeof HtmlIcsFetchCacheBaseSchema>;
 
-export const ValidationIssueSchema = z.object({
-  code: z.string(),
-  message: z.string(),
-  severity: z.enum(['info', 'warning', 'error']).default('error')
-});
-export type ValidationIssue = z.infer<typeof ValidationIssueSchema>;
-
-export const HtmlIcsConnectorMetadataSchema = z.object({
-  targetCalendarLabel: z.string(),
+export const HtmlIcsValidationMetadataSchema = z.object({
+  status: z.enum(['ok', 'failed']).default('failed'),
   maskedUrl: z.string().optional(),
   previewEvents: z.array(ValidationEventPreviewSchema).default([]),
   lastSuccessfulFetchAt: z.string().nullable().optional(),
-  validationIssues: z.array(ValidationIssueSchema).default([]),
-  validationStatus: z.enum(['ok', 'failed']).optional()
+  issues: z.array(ValidationIssueSchema).default([])
+});
+export type HtmlIcsValidationMetadata = z.infer<typeof HtmlIcsValidationMetadataSchema>;
+
+export const HtmlIcsConnectorMetadataSchema = z.object({
+  targetCalendarLabel: z.string(),
+  validationMetadata: HtmlIcsValidationMetadataSchema,
+  fetchCache: HtmlIcsFetchCacheSchema
 });
 export type HtmlIcsConnectorMetadata = z.infer<typeof HtmlIcsConnectorMetadataSchema>;
 
@@ -219,7 +233,8 @@ export const ConnectorValidationResultSchema = z.object({
   maskedUrl: z.string().optional(),
   previewEvents: z.array(ValidationEventPreviewSchema).optional(),
   lastSuccessfulFetchAt: z.string().optional(),
-  issues: z.array(ValidationIssueSchema).default([])
+  issues: z.array(ValidationIssueSchema).default([]),
+  cacheMetadata: HtmlIcsFetchCacheSchema
 });
 export type ConnectorValidationResult = z.infer<typeof ConnectorValidationResultSchema>;
 

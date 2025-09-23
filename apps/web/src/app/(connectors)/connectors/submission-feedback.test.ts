@@ -80,4 +80,23 @@ describe('deriveConnectorSubmissionFeedback', () => {
     expect(result.successMessage).toBe('Connector Ops Calendar feed validated. 1 previewed event available.');
     expect(result.errorMessage).toBeUndefined();
   });
+
+  it('returns the first validation issue for HTML/ICS connectors that failed validation', () => {
+    const connector = buildConnector({
+      type: 'html_ics',
+      status: 'pending_validation',
+      validationIssues: [
+        {
+          code: 'HTTP_401',
+          message: 'Authentication failed for the provided header/token.',
+          severity: 'error'
+        }
+      ]
+    });
+
+    const result = deriveConnectorSubmissionFeedback(connector);
+
+    expect(result.successMessage).toBeUndefined();
+    expect(result.errorMessage).toBe('Authentication failed for the provided header/token.');
+  });
 });

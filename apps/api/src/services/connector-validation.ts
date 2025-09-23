@@ -3,7 +3,7 @@ import {
   ValidateConnectorRequestSchema,
   type ConnectorValidationResult
 } from '@syncal/core';
-import { createHtmlIcsAdapter } from '@syncal/connectors';
+import { validateHtmlIcsFeed } from '@syncal/connectors';
 import type { HtmlIcsAdapterOptions } from '@syncal/connectors';
 
 interface ConnectorValidationDependencies extends HtmlIcsAdapterOptions {
@@ -16,11 +16,10 @@ export async function validateConnectorConfiguration(
 ): Promise<ConnectorValidationResult> {
   const parsed = ValidateConnectorRequestSchema.parse(body);
 
-  const adapter = createHtmlIcsAdapter({
+  const result = await validateHtmlIcsFeed(parsed.config, {
     fetch: deps.fetch,
-    timeoutMs: deps.timeoutMs
+    timeoutMs: deps.timeoutMs ?? 30_000,
+    nowFactory: deps.now ?? (() => new Date())
   });
-
-  const result = await adapter.validate(parsed.config);
   return ConnectorValidationResultSchema.parse(result);
 }

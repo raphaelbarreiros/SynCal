@@ -1,6 +1,7 @@
 import { PrismaClient } from '@prisma/client';
 import { createLogger, loadEnv } from '@syncal/config';
 import { createWorker } from './worker.js';
+import { createHtmlIcsSyncExecutor } from './executors/html-ics.js';
 
 const env = loadEnv();
 const logger = createLogger({ service: 'worker' });
@@ -10,7 +11,8 @@ export async function startWorker(): Promise<void> {
     prisma: new PrismaClient(),
     logger,
     intervalMs: env.WORKER_HEARTBEAT_INTERVAL_MS,
-    pollIntervalMs: Math.max(1000, Math.floor(env.WORKER_HEARTBEAT_INTERVAL_MS / 2))
+    pollIntervalMs: Math.max(1000, Math.floor(env.WORKER_HEARTBEAT_INTERVAL_MS / 2)),
+    executor: createHtmlIcsSyncExecutor({ timeoutMs: 30_000 })
   });
 
   await worker.start();

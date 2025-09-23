@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { FastifySessionObject } from '@fastify/session';
 import type { AppEnv } from '@syncal/config';
-import type { Calendar, Connector } from '@prisma/client';
+import type { Calendar, Connector, PrismaClient } from '@prisma/client';
 import { createConnector } from '../../src/services/connectors.js';
 
 const baseEnv: AppEnv = {
@@ -95,9 +95,47 @@ describe('createConnector – HTML/ICS', () => {
     const fetchMock = vi.fn(async () =>
       new Response(
         'BEGIN:VCALENDAR\nVERSION:2.0\nBEGIN:VEVENT\nUID:htmlics\nDTSTART:20260101T100000Z\nSUMMARY:Imported\nEND:VEVENT\nEND:VCALENDAR',
-        { status: 200 }
+        {
+          status: 200,
+          headers: {
+            ETag: '"etag-value"',
+            'Last-Modified': 'Wed, 01 Jan 2025 00:00:00 GMT'
+          }
+        }
       )
     );
+
+    const prismaStub = {
+      syncPair: {
+        upsert: vi.fn(async () => ({
+          id: 'pair-id',
+          primaryCalendarId: 'calendar-id',
+          secondaryCalendarId: 'calendar-id',
+          fallbackOrder: [],
+          createdAt: now,
+          updatedAt: now
+        }))
+      },
+      syncJob: {
+        findFirst: vi.fn(async () => null),
+        create: vi.fn(async () => ({
+          id: 'job-id',
+          pairId: 'pair-id',
+          connectorId: '11111111-1111-4111-8111-111111111111',
+          status: 'pending',
+          payload: {},
+          windowStart: now,
+          windowEnd: now,
+          nextRunAt: now,
+          retryCount: 0,
+          maxRetries: 5,
+          priority: 1,
+          lastError: null,
+          createdAt: now,
+          updatedAt: now
+        }))
+      }
+    } as unknown as PrismaClient;
 
     const result = await createConnector({
       body: {
@@ -124,7 +162,7 @@ describe('createConnector – HTML/ICS', () => {
         connectors: connectorsRepo as unknown as any,
         calendars: calendarsRepo as unknown as any,
         auditLogs: auditLogsRepo as unknown as any,
-        prisma: {} as any,
+        prisma: prismaStub,
         fetchImpl: fetchMock
       }
     });
@@ -135,12 +173,21 @@ describe('createConnector – HTML/ICS', () => {
     expect(result.previewEvents).toHaveLength(1);
     expect(result.maskedUrl).toBe('https://calendar.example.com/…/feed.ics');
     expect(result.targetCalendarLabel).toBe('Ops Calendar');
+    expect(result.validationIssues).toEqual([]);
     expect(calendarsRepo.upsertMany).toHaveBeenCalledTimes(1);
 
     const createCall = connectorsRepo.create.mock.calls[0][0];
     const storedConfig = JSON.parse(JSON.stringify(createCall.config));
     expect(storedConfig.targetCalendarLabel).toBe('Ops Calendar');
-    expect(storedConfig.validationStatus).toBe('ok');
+    expect(storedConfig.validationMetadata.status).toBe('ok');
+    expect(storedConfig.validationMetadata.previewEvents).toHaveLength(1);
+    expect(storedConfig.validationMetadata.maskedUrl).toBe('https://calendar.example.com/…/feed.ics');
+    expect(storedConfig.fetchCache).toEqual({
+      etag: '"etag-value"',
+      lastModified: 'Wed, 01 Jan 2025 00:00:00 GMT'
+    });
     expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(prismaStub.syncPair.upsert).toHaveBeenCalledTimes(1);
+    expect(prismaStub.syncJob.create).toHaveBeenCalledTimes(1);
   });
 });

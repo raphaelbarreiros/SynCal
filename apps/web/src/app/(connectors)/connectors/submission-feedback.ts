@@ -26,8 +26,10 @@ export function deriveConnectorSubmissionFeedback(
       };
     }
 
+    const issueMessage = connector.validationIssues?.[0]?.message;
     return {
       errorMessage:
+        issueMessage ??
         'Connector was created but still requires validation. Test the feed and retry from the connector list.'
     };
   }

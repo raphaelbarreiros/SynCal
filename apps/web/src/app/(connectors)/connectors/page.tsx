@@ -403,6 +403,21 @@ function ConnectorsContent() {
     setIsHtmlWizardActive(false);
   }, [resetHtmlWizard]);
 
+  const reopenHtmlWizardForConnector = useCallback(
+    (connector: Connector) => {
+      setPageError(null);
+      setActionMessage(null);
+      resetHtmlWizard();
+      setHtmlForm((prev) => ({
+        ...prev,
+        targetCalendarLabel: connector.targetCalendarLabel ?? '',
+        displayName: connector.displayName ?? connector.targetCalendarLabel ?? ''
+      }));
+      setIsHtmlWizardActive(true);
+    },
+    [resetHtmlWizard]
+  );
+
   const submitConnector = useCallback(async () => {
     if (!activeProvider || !activeContextEntry) {
       return;
@@ -678,32 +693,6 @@ function ConnectorsContent() {
     </div>
   );
 
-  const wizardDescription = isHtmlWizardActive
-    ? 'Provide feed details, test the connection, and save.'
-    : activeContextEntry
-        ? 'Step 2 of 2 – choose calendars and confirm.'
-        : 'Step 1 of 2 – pick a provider to begin.';
-
-  const wizardContent = isHtmlWizardActive
-    ? (
-        <HtmlIcsWizard
-          form={htmlForm}
-          errors={htmlFormErrors}
-          onChange={updateHtmlForm}
-          onBack={closeHtmlWizard}
-          onTest={testHtmlFeed}
-          onSubmit={submitHtmlConnector}
-          isTesting={isTestingHtml}
-          isSubmitting={isSubmitting}
-          validationResult={htmlValidationResult}
-          validationIssues={htmlValidationIssues}
-          errorMessage={htmlWizardError}
-        />
-      )
-    : activeContextEntry
-      ? renderCalendarSelection()
-      : renderProviderCards();
-
   const renderCalendarSelection = () => {
     if (!activeProvider || !activeContextEntry) {
       return null;
@@ -839,6 +828,32 @@ function ConnectorsContent() {
     );
   };
 
+  const wizardDescription = isHtmlWizardActive
+    ? 'Provide feed details, test the connection, and save.'
+    : activeContextEntry
+        ? 'Step 2 of 2 – choose calendars and confirm.'
+        : 'Step 1 of 2 – pick a provider to begin.';
+
+  const wizardContent = isHtmlWizardActive
+    ? (
+        <HtmlIcsWizard
+          form={htmlForm}
+          errors={htmlFormErrors}
+          onChange={updateHtmlForm}
+          onBack={closeHtmlWizard}
+          onTest={testHtmlFeed}
+          onSubmit={submitHtmlConnector}
+          isTesting={isTestingHtml}
+          isSubmitting={isSubmitting}
+          validationResult={htmlValidationResult}
+          validationIssues={htmlValidationIssues}
+          errorMessage={htmlWizardError}
+        />
+      )
+    : activeContextEntry
+        ? renderCalendarSelection()
+        : renderProviderCards();
+
   return (
     <div className="space-y-8">
       <header className="space-y-2">
@@ -964,6 +979,37 @@ function ConnectorsContent() {
                             <p className="text-xs text-slate-500 dark:text-slate-400">
                               Label: {connector.targetCalendarLabel}
                             </p>
+                          ) : null}
+                          {connector.validationIssues && connector.validationIssues.length > 0 ? (
+                            <div className="mt-2 space-y-2 rounded-xl border border-red-300 bg-red-50 p-3 text-xs text-red-700 dark:border-red-600 dark:bg-red-900/30 dark:text-red-200">
+                              <p className="font-semibold uppercase tracking-wide">Validation issues</p>
+                              <ul className="space-y-1">
+                                {connector.validationIssues.map((issue) => (
+                                  <li key={`${issue.code}-${issue.message}`}>{issue.message}</li>
+                                ))}
+                              </ul>
+                              <button
+                                type="button"
+                                className="inline-flex items-center justify-center rounded-md border border-red-300 px-3 py-1 text-xs font-semibold text-red-700 transition hover:bg-red-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400 dark:border-red-500 dark:text-red-200 dark:hover:bg-red-900/40"
+                                onClick={() => reopenHtmlWizardForConnector(connector)}
+                              >
+                                Retest feed
+                              </button>
+                            </div>
+                          ) : connector.status === 'pending_validation' ? (
+                            <div className="mt-2 space-y-2 rounded-xl border border-amber-300 bg-amber-50 p-3 text-xs text-amber-700 dark:border-amber-600 dark:bg-amber-900/30 dark:text-amber-200">
+                              <p className="font-semibold uppercase tracking-wide">Validation pending</p>
+                              <p>
+                                Test the feed again and resolve any reported issues before enabling this connector.
+                              </p>
+                              <button
+                                type="button"
+                                className="inline-flex items-center justify-center rounded-md border border-amber-300 px-3 py-1 text-xs font-semibold text-amber-700 transition hover:bg-amber-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 dark:border-amber-500 dark:text-amber-200 dark:hover:bg-amber-900/40"
+                                onClick={() => reopenHtmlWizardForConnector(connector)}
+                              >
+                                Retest feed
+                              </button>
+                            </div>
                           ) : null}
                         </div>
                       ) : (

@@ -1,6 +1,7 @@
 import type {
   ConnectorValidationResult,
-  HtmlIcsConnectorConfig
+  HtmlIcsConnectorConfig,
+  HtmlIcsFetchCache
 } from '@syncal/core';
 
 export type OAuthProvider = 'google' | 'microsoft';
@@ -65,6 +66,7 @@ export interface HtmlIcsAdapterOptions {
   fetch?: typeof fetch;
   timeoutMs?: number;
   now?: () => Date;
+  cache?: HtmlIcsFetchCache | null;
 }
 
 export interface OAuthAuthorizationUrlParams {

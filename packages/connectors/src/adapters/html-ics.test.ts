@@ -19,7 +19,13 @@ describe('createHtmlIcsAdapter', () => {
           'END:VEVENT',
           'END:VCALENDAR'
         ].join('\n'),
-        { status: 200 }
+        {
+          status: 200,
+          headers: {
+            ETag: '"123"',
+            'Last-Modified': 'Wed, 01 Jan 2025 00:00:00 GMT'
+          }
+        }
       )
     );
 
@@ -39,6 +45,10 @@ describe('createHtmlIcsAdapter', () => {
       allDay: false
     });
     expect(result.maskedUrl).toBe('https://calendar.example.com/…/feed.ics');
+    expect(result.cacheMetadata).toEqual({
+      etag: '"123"',
+      lastModified: 'Wed, 01 Jan 2025 00:00:00 GMT'
+    });
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
@@ -73,6 +83,36 @@ describe('createHtmlIcsAdapter', () => {
 
     expect(result.status).toBe('failed');
     expect(result.issues[0].code).toBe('HTTP_401');
+  });
+
+  it('sends conditional headers when cache metadata is provided', async () => {
+    const fetchMock = vi.fn(async (_url: string, init?: RequestInit) => {
+      expect(init?.headers).toMatchObject({
+        'If-None-Match': '"etag-value"',
+        'If-Modified-Since': 'Thu, 02 Jan 2025 00:00:00 GMT'
+      });
+
+      return new Response(
+        'BEGIN:VCALENDAR\nBEGIN:VEVENT\nUID:cached\nDTSTART:20260101T000000Z\nEND:VEVENT\nEND:VCALENDAR',
+        { status: 200 }
+      );
+    });
+
+    const adapter = createHtmlIcsAdapter({
+      fetch: fetchMock,
+      now: () => NOW,
+      cache: {
+        etag: '"etag-value"',
+        lastModified: 'Thu, 02 Jan 2025 00:00:00 GMT'
+      }
+    });
+
+    await adapter.validate({
+      feedUrl: 'https://calendar.example.com/feed.ics',
+      targetCalendarLabel: 'Ops'
+    });
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
   it('maps abort errors to timeout issues', async () => {
