@@ -16,7 +16,10 @@
     "prisma:generate": "prisma generate",
     "prisma:migrate:deploy": "prisma migrate deploy",
     "smoke": "node scripts/smoke.mjs",
-    "test": "vitest --run"
+    "test": "vitest --run",
+    "bmad:refresh": "bmad-method install -f -i codex",
+    "bmad:list": "bmad-method list:agents",
+    "bmad:validate": "bmad-method validate"
   },
   "devDependencies": {
     "@types/node": "^22.7.5",

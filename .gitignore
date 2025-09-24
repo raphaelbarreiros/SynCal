@@ -1,6 +1,7 @@
 # BMAD (local only)
 .bmad-core/
 .bmad-*/
+web-bundles/
 
 # Dependency directories
 node_modules/
@@ -44,3 +45,8 @@ Thumbs.db
 
 # Local ignore folder
 .ignore/
+
+# AI Agents
+.kilocodemodes
+.roomodes
+.github
