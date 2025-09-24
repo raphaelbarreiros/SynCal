@@ -1,0 +1,40 @@
+schema: 1
+story: '2.2'
+story_title: 'HTML/ICS feed connector'
+gate: PASS
+status_reason: 'HTML/ICS validation now honours recurrence/timezone semantics and worker routing keeps other connectors healthy.'
+reviewer: 'Quinn (Test Architect)'
+updated: '2025-09-23T18:25:38Z'
+
+top_issues: []
+
+waiver:
+  active: false
+
+quality_score: 100
+expires: '2025-10-07T18:25:41Z'
+
+evidence:
+  tests_reviewed: 5
+  risks_identified: 0
+  trace:
+    ac_covered: [1, 2, 3, 4]
+    ac_gaps: []
+
+nfr_validation:
+  security:
+    status: PASS
+    notes: 'Secrets remain encrypted and only masked feed URLs reach the UI.'
+  performance:
+    status: PASS
+    notes: 'Requests reuse cache metadata with a 30s timeout and 5-event preview cap.'
+  reliability:
+    status: PASS
+    notes: 'Node-ical + ical-expander cover BYDAY/BYSETPOS, timezone aliases, and 304 cache reuse.'
+  maintainability:
+    status: PASS
+    notes: 'Implementation follows architecture guidance and is backed by unit, integration, and E2E tests.'
+
+recommendations:
+  immediate: []
+  future: []
