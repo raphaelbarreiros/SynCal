@@ -38,3 +38,34 @@ export function createNoopSyncExecutor(): JobExecutor {
     } satisfies JobExecutionResult;
   };
 }
+
+export function createJobRouter(
+  routes: Record<string, JobExecutor>,
+  fallback?: JobExecutor
+): JobExecutor {
+  const fallbackExecutor =
+    fallback ??
+    (async (job, context) => {
+      const payload = job.payload as Record<string, unknown> | null;
+      const jobType = typeof payload?.type === 'string' ? payload.type : 'unknown';
+      context.logger.error({ jobId: job.id, jobType, payload }, 'Unsupported job type');
+      return {
+        outcome: 'failure',
+        processedEvents: 0,
+        failedEvents: 0,
+        errorSummary: `No executor registered for job type: ${jobType}`
+      } satisfies JobExecutionResult;
+    });
+
+  return async (job, context) => {
+    const payload = job.payload as Record<string, unknown> | null;
+    const jobType = typeof payload?.type === 'string' ? payload.type : undefined;
+    const executor = jobType ? routes[jobType] : undefined;
+
+    if (!executor) {
+      return fallbackExecutor(job, context);
+    }
+
+    return executor(job, context);
+  };
+}

@@ -154,6 +154,30 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ValidationError'
+  /connectors/validate:
+    post:
+      summary: Validate connector configuration without persisting
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ValidateConnectorRequest'
+      responses:
+        '200':
+          description: Validation executed and results returned
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConnectorValidationResult'
+        '401':
+          description: Requires admin session
+        '422':
+          description: Validation failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
   /connectors/{connectorId}:
     parameters:
       - $ref: '#/components/parameters/ConnectorId'
@@ -343,6 +367,17 @@ components:
         lastValidatedAt:
           type: string
           format: date-time
+        lastSuccessfulFetchAt:
+          type: string
+          format: date-time
+        maskedUrl:
+          type: string
+        previewEvents:
+          type: array
+          items:
+            $ref: '#/components/schemas/ValidationEventPreview'
+        targetCalendarLabel:
+          type: string
     CreateConnectorRequest:
       type: object
       required: [type, config]
@@ -361,6 +396,80 @@ components:
         config:
           type: object
           additionalProperties: true
+    ValidateConnectorRequest:
+      type: object
+      required: [type, config]
+      properties:
+        type:
+          type: string
+          enum: [google, microsoft, html_ics, imap, self_managed]
+        config:
+          oneOf:
+            - $ref: '#/components/schemas/HtmlIcsConnectorConfig'
+            - type: object
+              additionalProperties: true
+    HtmlIcsConnectorConfig:
+      type: object
+      required: [feedUrl, targetCalendarLabel]
+      properties:
+        feedUrl:
+          type: string
+          format: uri
+        authHeader:
+          type: string
+          nullable: true
+        authToken:
+          type: string
+          nullable: true
+        targetCalendarLabel:
+          type: string
+    ConnectorValidationResult:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+          enum: [ok, failed]
+        maskedUrl:
+          type: string
+        previewEvents:
+          type: array
+          items:
+            $ref: '#/components/schemas/ValidationEventPreview'
+        lastSuccessfulFetchAt:
+          type: string
+          format: date-time
+        issues:
+          type: array
+          items:
+            $ref: '#/components/schemas/ValidationIssue'
+    ValidationEventPreview:
+      type: object
+      required: [uid, summary, startsAt, endsAt]
+      properties:
+        uid:
+          type: string
+        summary:
+          type: string
+        startsAt:
+          type: string
+          format: date-time
+        endsAt:
+          type: string
+          format: date-time
+        allDay:
+          type: boolean
+    ValidationIssue:
+      type: object
+      required: [code, message]
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+        severity:
+          type: string
+          enum: [info, warning, error]
     ValidationError:
       type: object
       properties:

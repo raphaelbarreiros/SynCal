@@ -1,5 +1,14 @@
 import { z } from 'zod';
 
+export const ConnectorTypeSchema = z.enum([
+  'google',
+  'microsoft',
+  'html_ics',
+  'imap',
+  'self_managed'
+]);
+export type ConnectorType = z.infer<typeof ConnectorTypeSchema>;
+
 export const OAuthProviderSchema = z.enum(['google', 'microsoft']);
 export type OAuthProvider = z.infer<typeof OAuthProviderSchema>;
 
@@ -62,12 +71,46 @@ export const CalendarSelectionSchema = z.object({
 });
 export type CalendarSelection = z.infer<typeof CalendarSelectionSchema>;
 
-export const CreateConnectorRequestSchema = z.object({
+export const HtmlIcsConnectorConfigSchema = z
+  .object({
+    feedUrl: z
+      .string()
+      .url()
+      .refine((value) => value.startsWith('https://'), {
+        message: 'Feed URL must use HTTPS'
+      }),
+    authHeader: z.string().min(1).optional(),
+    authToken: z.string().min(1).optional(),
+    targetCalendarLabel: z.string().min(1)
+  })
+  .superRefine((value, ctx) => {
+    if ((value.authHeader && !value.authToken) || (!value.authHeader && value.authToken)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'Auth header name and token must both be provided',
+        path: value.authHeader ? ['authToken'] : ['authHeader']
+      });
+    }
+  });
+export type HtmlIcsConnectorConfig = z.infer<typeof HtmlIcsConnectorConfigSchema>;
+
+const OAuthCreateConnectorRequestSchema = z.object({
   type: OAuthProviderSchema,
   state: z.string().min(16),
   displayName: z.string().optional(),
   selectedCalendars: z.array(CalendarSelectionSchema).min(1)
 });
+
+const HtmlIcsCreateConnectorRequestSchema = z.object({
+  type: z.literal('html_ics'),
+  displayName: z.string().optional(),
+  config: HtmlIcsConnectorConfigSchema
+});
+
+export const CreateConnectorRequestSchema = z.discriminatedUnion('type', [
+  OAuthCreateConnectorRequestSchema,
+  HtmlIcsCreateConnectorRequestSchema
+]);
 export type CreateConnectorRequest = z.infer<typeof CreateConnectorRequestSchema>;
 
 export const ConnectorCalendarSchema = z.object({
@@ -113,14 +156,45 @@ export const ConnectorConfigSchema = z
   .passthrough();
 export type ConnectorConfig = z.infer<typeof ConnectorConfigSchema>;
 
+export const ValidationEventPreviewSchema = z.object({
+  uid: z.string(),
+  summary: z.string().optional(),
+  startsAt: z.string(),
+  endsAt: z.string().optional(),
+  allDay: z.boolean().default(false)
+});
+export type ValidationEventPreview = z.infer<typeof ValidationEventPreviewSchema>;
+
+export const ValidationIssueSchema = z.object({
+  code: z.string(),
+  message: z.string(),
+  severity: z.enum(['info', 'warning', 'error']).default('error')
+});
+export type ValidationIssue = z.infer<typeof ValidationIssueSchema>;
+
 export const ConnectorResponseSchema = z.object({
   id: z.string().uuid(),
-  type: OAuthProviderSchema,
+  type: ConnectorTypeSchema,
   displayName: z.string().nullable(),
   status: ConnectorStatusSchema,
   lastValidatedAt: z.string().nullable().optional(),
   calendars: z.array(ConnectorCalendarSchema).default([]),
   config: ConnectorConfigSchema.optional(),
+  maskedUrl: z.string().optional(),
+  lastSuccessfulFetchAt: z.string().nullable().optional(),
+  previewEvents: z
+    .array(
+      z.object({
+        uid: z.string(),
+        summary: z.string().optional(),
+        startsAt: z.string(),
+        endsAt: z.string().optional(),
+        allDay: z.boolean().default(false)
+      })
+    )
+    .optional(),
+  validationIssues: z.array(ValidationIssueSchema).optional(),
+  targetCalendarLabel: z.string().optional(),
   createdAt: z.string(),
   updatedAt: z.string()
 });
@@ -130,3 +204,44 @@ export const ConnectorListResponseSchema = z.object({
   connectors: z.array(ConnectorResponseSchema)
 });
 export type ConnectorListResponse = z.infer<typeof ConnectorListResponseSchema>;
+
+const HtmlIcsFetchCacheBaseSchema = z.object({
+  etag: z.string().min(1).optional(),
+  lastModified: z.string().min(1).optional()
+});
+export const HtmlIcsFetchCacheSchema = HtmlIcsFetchCacheBaseSchema.optional();
+export type HtmlIcsFetchCache = z.infer<typeof HtmlIcsFetchCacheBaseSchema>;
+
+export const HtmlIcsValidationMetadataSchema = z.object({
+  status: z.enum(['ok', 'failed']).default('failed'),
+  maskedUrl: z.string().optional(),
+  previewEvents: z.array(ValidationEventPreviewSchema).default([]),
+  lastSuccessfulFetchAt: z.string().nullable().optional(),
+  issues: z.array(ValidationIssueSchema).default([])
+});
+export type HtmlIcsValidationMetadata = z.infer<typeof HtmlIcsValidationMetadataSchema>;
+
+export const HtmlIcsConnectorMetadataSchema = z.object({
+  targetCalendarLabel: z.string(),
+  validationMetadata: HtmlIcsValidationMetadataSchema,
+  fetchCache: HtmlIcsFetchCacheSchema
+});
+export type HtmlIcsConnectorMetadata = z.infer<typeof HtmlIcsConnectorMetadataSchema>;
+
+export const ConnectorValidationResultSchema = z.object({
+  status: z.enum(['ok', 'failed']),
+  maskedUrl: z.string().optional(),
+  previewEvents: z.array(ValidationEventPreviewSchema).optional(),
+  lastSuccessfulFetchAt: z.string().optional(),
+  issues: z.array(ValidationIssueSchema).default([]),
+  cacheMetadata: HtmlIcsFetchCacheSchema
+});
+export type ConnectorValidationResult = z.infer<typeof ConnectorValidationResultSchema>;
+
+export const ValidateConnectorRequestSchema = z.discriminatedUnion('type', [
+  z.object({
+    type: z.literal('html_ics'),
+    config: HtmlIcsConnectorConfigSchema
+  })
+]);
+export type ValidateConnectorRequest = z.infer<typeof ValidateConnectorRequestSchema>;

@@ -6,10 +6,17 @@ import type { AppLogger } from '@syncal/config';
 import { QueueConsumer } from '../../src/consumers/queue.js';
 import { resetMetrics, metricsRegistry } from '../../src/telemetry/metrics.js';
 
-const BASE_DATABASE_URL =
+const rawDatabaseUrl =
   process.env.TEST_DATABASE_URL ??
   process.env.DATABASE_URL ??
   'postgresql://syncal:syncalsecret@localhost:5432/syncal';
+
+const parsedUrl = new URL(rawDatabaseUrl);
+if (parsedUrl.hostname === 'localhost') {
+  parsedUrl.hostname = '127.0.0.1';
+}
+
+const BASE_DATABASE_URL = parsedUrl.toString();
 
 function withSchema(url: string, schema: string): string {
   return `${url}${url.includes('?') ? '&' : '?'}schema=${schema}`;
@@ -39,7 +46,8 @@ try {
     stdio: 'inherit',
     env: {
       ...process.env,
-      DATABASE_URL: databaseUrl
+      DATABASE_URL: databaseUrl,
+      PGOPTIONS: `-c search_path=${schemaName},public`
     }
   });
 

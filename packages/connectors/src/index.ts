@@ -8,3 +8,7 @@ export {
   buildMicrosoftAuthorizationUrl,
   type MicrosoftAdapterOptions
 } from './adapters/microsoft.js';
+export { createHtmlIcsAdapter, validateHtmlIcsFeed } from './adapters/html-ics.js';
+export { maskFeedUrl } from './utils/mask.js';
+export { createConnectorRegistry } from './registry.js';
+export type { ConnectorRegistry } from './registry.js';

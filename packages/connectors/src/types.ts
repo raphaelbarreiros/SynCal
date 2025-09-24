@@ -1,4 +1,12 @@
+import type {
+  ConnectorValidationResult,
+  HtmlIcsConnectorConfig,
+  HtmlIcsFetchCache,
+  HtmlIcsValidationMetadata
+} from '@syncal/core';
+
 export type OAuthProvider = 'google' | 'microsoft';
+export type ConnectorProvider = OAuthProvider | 'html_ics';
 
 export interface OAuthTokens {
   accessToken: string;
@@ -45,10 +53,22 @@ export interface OAuthExchangeParams {
 }
 
 export interface ConnectorAdapter {
-  readonly provider: OAuthProvider;
-  exchangeCode(params: OAuthExchangeParams): Promise<{ tokens: OAuthTokens; profile: ProviderProfile }>;
-  listCalendars(tokens: OAuthTokens): Promise<ProviderCalendar[]>;
-  fetchUpcomingEvents(tokens: OAuthTokens, calendarId: string, windowDays?: number): Promise<ProviderEventSummary>;
+  readonly provider: ConnectorProvider;
+  exchangeCode?(params: OAuthExchangeParams): Promise<{
+    tokens: OAuthTokens;
+    profile: ProviderProfile;
+  }>;
+  listCalendars?(tokens: OAuthTokens): Promise<ProviderCalendar[]>;
+  fetchUpcomingEvents?(tokens: OAuthTokens, calendarId: string, windowDays?: number): Promise<ProviderEventSummary>;
+  validate?(config: HtmlIcsConnectorConfig): Promise<ConnectorValidationResult>;
+}
+
+export interface HtmlIcsAdapterOptions {
+  fetch?: typeof fetch;
+  timeoutMs?: number;
+  now?: () => Date;
+  cache?: HtmlIcsFetchCache | null;
+  previousValidation?: HtmlIcsValidationMetadata | null;
 }
 
 export interface OAuthAuthorizationUrlParams {

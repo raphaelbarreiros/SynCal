@@ -1,3 +1,5 @@
+import { maskFeedUrl as maskFeedUrlInternal } from '@syncal/connectors';
+
 export function maskEmail(email: string): string {
   const [local, domain] = email.split('@');
   if (!domain) {
@@ -12,3 +14,5 @@ export function maskEmail(email: string): string {
   const obscuredLength = Math.max(local.length - 2, 1);
   return `${visible}${'*'.repeat(obscuredLength)}@${domain}`;
 }
+
+export const maskFeedUrl = maskFeedUrlInternal;

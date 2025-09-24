@@ -12,6 +12,28 @@ function connectorLabel(connector: ConnectorResponse): string {
 export function deriveConnectorSubmissionFeedback(
   connector: ConnectorResponse
 ): SubmissionFeedback {
+  if (connector.type === 'html_ics') {
+    const label = connector.targetCalendarLabel?.trim() || connectorLabel(connector);
+
+    if (connector.status === 'validated') {
+      const previewCount = connector.previewEvents?.length ?? 0;
+      const previewDetail = previewCount
+        ? ` ${previewCount} previewed event${previewCount === 1 ? '' : 's'} available.`
+        : '';
+
+      return {
+        successMessage: `Connector ${label} feed validated.${previewDetail}`.trim()
+      };
+    }
+
+    const issueMessage = connector.validationIssues?.[0]?.message;
+    return {
+      errorMessage:
+        issueMessage ??
+        'Connector was created but still requires validation. Test the feed and retry from the connector list.'
+    };
+  }
+
   const validation = connector.config?.validation;
 
   if (connector.status === 'validated') {

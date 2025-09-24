@@ -12,7 +12,9 @@
     "build": "tsc -p tsconfig.json"
   },
   "dependencies": {
-    "@syncal/core": "file:../core"
+    "@syncal/core": "file:../core",
+    "ical-expander": "^3.1.0",
+    "node-ical": "^0.21.0"
   },
   "devDependencies": {
     "typescript": "^5.9.2"
